@@ -890,7 +890,13 @@ a.pub-thumb:hover { box-shadow: 0 0 0 1px var(--accent-line), var(--shadow); }
   transition: transform 0.25s ease;
 }
 .fold[open] > .fold-summary .fold-chevron { transform: rotate(180deg); }
-.fold > .lines { margin-top: 14px; }
+.fold > .lines { margin-top: 14px; gap: 14px; }
+.line-note {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
 @media (prefers-reduced-motion: no-preference) {
   .fold[open] > .lines { animation: panel-in 0.25s ease-out; }
 }
