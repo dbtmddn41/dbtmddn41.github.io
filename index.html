@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500&text=%EC%9C%A0%EC%8A%B9%EC%9A%B0&display=swap">
-<link rel="stylesheet" href="assets/css/style.css?v=20261022f">
+<link rel="stylesheet" href="assets/css/style.css?v=20261022g">
 <script>
   (function () {
     var root = document.documentElement;
@@ -38,7 +38,7 @@
     }
   })();
 </script>
-<script src="assets/js/main.js?v=20261022f" defer></script>
+<script src="assets/js/main.js?v=20261022g" defer></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -245,7 +245,7 @@
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-taskvec" hidden>TL;DR</button>
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="bib-taskvec" hidden>BibTeX</button>
             </div>
-            <p class="tldr" id="tldr-taskvec" hidden>Derives a best-case bound, the Minimal-Gap Approximation, by decomposing self-attention, and shows that task vectors are structurally limited by attention and length gaps.</p>
+            <p class="tldr" id="tldr-taskvec" hidden>Task vectors compress in-context demonstrations into one activation to skip attending to them, yet they fail on some tasks. Decomposing self-attention gives their best case, the Minimal-Gap Approximation, and shows the failures are structural rather than heuristic: locking the context into fixed attention maps and positional alignments breaks under dynamic routing, length mismatch, and multi-token generation, across methods, architectures, and scales.</p>
             <div class="bib" id="bib-taskvec" hidden>
 <pre><code>@inproceedings{han2026revisiting,
   title     = {Revisiting Task Vectors: A Structural Analysis of Their Limits},
@@ -274,10 +274,11 @@
             <div class="pub-links">
               <a class="tag-btn" href="https://arxiv.org/abs/2512.23426" target="_blank" rel="noopener">arXiv</a>
               <a class="tag-btn" href="https://dohyun-as.github.io/DDSPO/" target="_blank" rel="noopener">Project</a>
+              <a class="tag-btn" href="https://github.com/KU-MIIL/DDSPO" target="_blank" rel="noopener">Code</a>
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-ddspo" hidden>TL;DR</button>
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="bib-ddspo" hidden>BibTeX</button>
             </div>
-            <p class="tldr" id="tldr-ddspo" hidden>Gives a diffusion model preference supervision at every denoising step, using a contrasting pair of winning and losing policies.</p>
+            <p class="tldr" id="tldr-ddspo" hidden>Diffusion-DPO and similar methods take preference targets from forward-process posteriors of final images, which do not match the model’s own denoising steps. DDSPO supervises every backward denoising step with a contrastive policy pair: winning and losing models trained on preferences, or, training-free, one pretrained model given the original prompt and a semantically degraded one, with no reward model or labels. It beats forward-process supervision on text–image alignment and aesthetics.</p>
             <div class="bib" id="bib-ddspo" hidden>
 <pre><code>@inproceedings{kim2026ddspo,
   title     = {Direct Diffusion Score Preference Optimization via Stepwise Contrastive Policy-Pair Supervision},
@@ -305,11 +306,14 @@
             <p class="pub-venue is-accepted"><em>CVPR 2026</em></p>
             <div class="pub-links">
               <a class="tag-btn" href="https://arxiv.org/abs/2604.01634" target="_blank" rel="noopener">arXiv</a>
+              <a class="tag-btn" href="https://joonyeongs.github.io/CRIT/" target="_blank" rel="noopener">Project</a>
+              <a class="tag-btn" href="https://github.com/joonyeongs/CRIT" target="_blank" rel="noopener">Code</a>
+              <a class="tag-btn" href="https://huggingface.co/datasets/KU-MIIL/CRIT" target="_blank" rel="noopener">Dataset</a>
               <a class="tag-btn" href="https://cvpr.thecvf.com/virtual/2026/poster/39273" target="_blank" rel="noopener">Poster</a>
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-crit" hidden>TL;DR</button>
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="bib-crit" hidden>BibTeX</button>
             </div>
-            <p class="tldr" id="tldr-crit" hidden>Synthesizes interleaved image–text questions from multimodal content graphs so that answering requires hops across both modalities.</p>
+            <p class="tldr" id="tldr-crit" hidden>Most multimodal benchmarks can be solved from one modality, and interleaved training data rarely demands more, so VLMs hallucinate and ground their reasoning poorly. CRIT generates multi-hop questions that need both text and image evidence from multimodal content graphs over natural images, video frames, and scientific papers, with a manually verified test set. Qwen2.5-VL 7B trained on it reaches 43.9 EM, against 28.0 for GPT-4o, and improves on SPIQA and other benchmarks.</p>
             <div class="bib" id="bib-crit" hidden>
 <pre><code>@inproceedings{sung2026crit,
   title     = {{CRIT}: Graph-Based Automatic Data Synthesis to Enhance Cross-Modal Multi-Hop Reasoning},
@@ -343,7 +347,7 @@
             <div class="pub-links">
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-elastic" hidden>TL;DR</button>
             </div>
-            <p class="tldr" id="tldr-elastic" hidden>Makes removed tokens an absorbing state that the Transformer never encodes, and predicts how many to reactivate between unmasked tokens, which cuts decoding time and lets the output length vary.</p>
+            <p class="tldr" id="tldr-elastic" hidden>Masked diffusion models re-encode the whole sequence every step and fix the output length in advance. Elastic-MDM adds an absorbing REMOVED state that is dropped from the Transformer input, plus a light head that predicts how many removed tokens to reactivate between unmasked ones, so steps get cheaper and length is decided while decoding. It cuts wall time at similar quality, follows the training length distribution without a cap, and improves JSON generation.</p>
           </div>
         </li>
 
@@ -367,7 +371,7 @@
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-osi" hidden>TL;DR</button>
               <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="bib-osi" hidden>BibTeX</button>
             </div>
-            <p class="tldr" id="tldr-osi" hidden>A benchmark of matched benign, dual-use, and malicious prompt sets that tests whether a model’s help adapts to the intent behind a request.</p>
+            <p class="tldr" id="tldr-osi" hidden>Each item holds one task fixed in benign, dual-use, and malicious versions, testing whether a model’s help tracks intent instead of looking safe on average. Prompt-level safety hides failures: models often fail to stay safe across a matched set, dual-use behavior breaks under paraphrase, and high-level answers on risky topics are not reliably safe, while reframing an ambiguous request into a safer task crosses the line far less often.</p>
             <div class="bib" id="bib-osi" hidden>
 <pre><code>@article{uppaal2026opensafeintent,
   title   = {{OpenSafeIntent}: Evaluating Intent-Calibrated Safe Completion Across Dual-Use Prompt Sets},
@@ -448,8 +452,6 @@
         <li><span>Korea–U.S. Youth Exchange Program in Advanced Fields, 4th Cohort</span><span class="line-date">2026</span></li>
         <li><span>Academic Merit Scholarship</span><span class="line-date">Fall 2025</span></li>
         <li><span>Academic Excellence Scholarship</span><span class="line-date">Spring 2025</span></li>
-        <li><span>Kaggle, Home Credit: Credit Risk Model Stability, Silver Medal <span class="muted">(122 / 3,856)</span></span><span class="line-date">2024</span></li>
-        <li><span>Kaggle, LLM Prompt Recovery <span class="muted">(260 / 2,175)</span></span><span class="line-date">2024</span></li>
       </ul>
     </div>
   </section>

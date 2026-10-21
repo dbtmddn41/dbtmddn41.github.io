@@ -83,30 +83,49 @@
     if (fresh.has(i)) t.className = 'fresh';
     photo.appendChild(t);
   }
-  // The field around it, as on the page: the photo's tile grid extended outward, partly noisy.
+  // The field around it, as on the page: samples on a Swiss roll centred on the photo slot,
+  // a quarter of them masked (grey, displaced by noise).
   const c = document.getElementById('field');
   const g = c.getContext('2d');
   g.scale(2, 2);
-  const P = { l: 1200 - 108 - 300, t: 165, r: 1200 - 108, b: 165 + 300 };
-  const cell = 300 / 8;
-  const reach = 5 * cell;
+  const W = 300;
+  const cx = 1200 - 108 - W / 2;
+  const cy = 165 + W / 2;
+  const from = 2 * Math.PI;
+  const to = 8 * Math.PI;
+  const b = W / to;
+  const turn = Math.PI / 4 - to;
+  const F = (t) => (t * Math.sqrt(t * t + 1) + Math.asinh(t)) / 2;
+  const tAt = (share) => {
+    let lo = from;
+    let hi = to;
+    const goal = F(from) + share * (F(to) - F(from));
+    for (let k = 0; k < 40; k++) { const mid = (lo + hi) / 2; if (F(mid) < goal) lo = mid; else hi = mid; }
+    return lo;
+  };
   const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-  g.fillStyle = 'rgba(52, 78, 156, 0.5)';
-  for (let j = -6; j <= 14; j++) {
-    for (let i = -6; i <= 14; i++) {
-      const x = P.l + i * cell;
-      const y = P.t + j * cell;
-      const d = Math.hypot(Math.max(P.l - x, 0, x - P.r), Math.max(P.t - y, 0, y - P.b));
-      if (d === 0) continue;
-      let w = 1 - smooth(d / reach);
-      w *= smooth((x - 700) / (cell * 2)); // clear of the text
-      if (w < 0.02) continue;
-      const off = 0.85 * cell * 0.3;
-      g.globalAlpha = w * 0.7;
-      g.beginPath();
-      g.arc(x + gauss() * off, y + gauss() * off, 1.9, 0, Math.PI * 2);
-      g.fill();
-    }
+  const n = Math.floor((b * (F(to) - F(from))) / 16);
+  for (let i = 0; i < n; i++) {
+    const q = (i + 0.15 + 0.7 * rnd()) / n;
+    const t = tAt(q);
+    const r = b * t;
+    const ca = Math.cos(t + turn);
+    const sa = Math.sin(t + turn);
+    const tx = b * ca - r * sa;
+    const ty = b * sa + r * ca;
+    const tl = Math.hypot(tx, ty);
+    const across = gauss() * 0.022 * W;
+    let x = cx + r * ca - (ty / tl) * across;
+    let y = cy + r * sa + (tx / tl) * across;
+    const masked = rnd() < 0.25;
+    if (masked) { x += gauss() * 0.14 * W; y += gauss() * 0.14 * W; }
+    let w = smooth(q / 0.04) * (1 - smooth((q - 0.84) / 0.16));
+    w *= smooth((x - 700) / 60) * smooth(y / 30) * smooth((630 - y) / 30);
+    if (w < 0.02) continue;
+    g.fillStyle = masked ? `rgba(118, 127, 148, ${(0.42 * w).toFixed(3)})` : `rgba(52, 78, 156, ${(0.62 * w).toFixed(3)})`;
+    g.beginPath();
+    g.arc(x, y, masked ? 1.6 : 2.1, 0, Math.PI * 2);
+    g.fill();
   }
 </script>
 </body>

@@ -171,7 +171,6 @@ p { text-wrap: pretty; }
 }
 .skip-link:focus { top: 12px; }
 
-.muted { color: var(--muted); }
 
 kbd {
   padding: 1px 5px;
@@ -887,30 +886,58 @@ a.pub-thumb:hover { box-shadow: 0 0 0 1px var(--accent-line), var(--shadow); }
   pointer-events: none;
 }
 
-/* ── Theme switch: the new theme is unmasked tile by tile (cosine schedule) ── */
+/* ── Theme switch: the new theme sweeps over the page behind a thin scan line, down from
+   the top for dark (dusk) and up from the bottom for light (dawn) ── */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
 ::view-transition-new(root) {
-  -webkit-mask-image: url("../img/dissolve.png");
-  mask-image: url("../img/dissolve.png");
-  -webkit-mask-size: 100% 1000%;
-  mask-size: 100% 1000%;
+  /* 2.1 viewports tall: one opaque, a soft edge of 0.1, one clear. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 47.6%, transparent 52.4%);
+  mask-image: linear-gradient(to bottom, #000 47.6%, transparent 52.4%);
+  -webkit-mask-size: 100% 210%;
+  mask-size: 100% 210%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  animation: theme-unmask 0.62s steps(9, jump-none) both;
+  animation: theme-sweep-down 0.72s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
-@media (orientation: portrait) {
-  ::view-transition-new(root) {
-    -webkit-mask-image: url("../img/dissolve-portrait.png");
-    mask-image: url("../img/dissolve-portrait.png");
-  }
+:root[data-sweep="up"]::view-transition-new(root) {
+  -webkit-mask-image: linear-gradient(to top, #000 47.6%, transparent 52.4%);
+  mask-image: linear-gradient(to top, #000 47.6%, transparent 52.4%);
+  animation-name: theme-sweep-up;
 }
-@keyframes theme-unmask {
-  from { -webkit-mask-position: 0 0%; mask-position: 0 0%; }
+@keyframes theme-sweep-down {
+  from { -webkit-mask-position: 0 100%; mask-position: 0 100%; }
+  to { -webkit-mask-position: 0 0; mask-position: 0 0; }
+}
+@keyframes theme-sweep-up {
+  from { -webkit-mask-position: 0 0; mask-position: 0 0; }
   to { -webkit-mask-position: 0 100%; mask-position: 0 100%; }
+}
+/* The scan line exists only during the switch and rides the middle of the soft edge. */
+.theme-scan {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, transparent) 15%, color-mix(in srgb, var(--accent) 70%, transparent) 85%, transparent);
+  box-shadow: 0 0 14px 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  pointer-events: none;
+  view-transition-name: theme-scan;
+}
+::view-transition-group(theme-scan) { animation: none; }
+::view-transition-new(theme-scan) { animation: theme-scan-down 0.72s cubic-bezier(0.65, 0, 0.35, 1) both; }
+:root[data-sweep="up"]::view-transition-new(theme-scan) { animation-name: theme-scan-up; }
+@keyframes theme-scan-down {
+  from { transform: translateY(-5vh); }
+  to { transform: translateY(105vh); }
+}
+@keyframes theme-scan-up {
+  from { transform: translateY(105vh); }
+  to { transform: translateY(-5vh); }
 }
 
 /* ── Footer, back-to-top ──────────────────────────────── */

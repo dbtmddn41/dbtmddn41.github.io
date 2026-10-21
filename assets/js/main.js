@@ -105,8 +105,8 @@
     document.dispatchEvent(new Event('themechange')); // canvas drawings pick up the new colors
   }
   function toggleTheme() {
+    const next = currentTheme() === 'dark' ? 'light' : 'dark';
     const apply = () => {
-      const next = currentTheme() === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
       try { localStorage.setItem('theme', next); } catch (_) { /* storage unavailable */ }
       syncTheme();
@@ -116,7 +116,20 @@
       themeBtn.classList.add('is-turning');
       setTimeout(() => themeBtn.classList.remove('is-turning'), 450);
     }
-    document.startViewTransition(apply); // style.css masks the new view with a cosine-schedule mosaic
+    // The new theme sweeps over the page (style.css): dark comes down like dusk, light rises
+    // like dawn, with a scan line on the edge that lives only for the switch.
+    root.dataset.sweep = next === 'dark' ? 'down' : 'up';
+    const scan = document.createElement('div');
+    scan.className = 'theme-scan';
+    scan.setAttribute('aria-hidden', 'true');
+    const transition = document.startViewTransition(() => {
+      apply();
+      document.body.appendChild(scan);
+    });
+    transition.finished.finally(() => {
+      scan.remove();
+      delete root.dataset.sweep;
+    });
   }
   themeBtn?.addEventListener('click', toggleTheme);
   darkQuery.addEventListener?.('change', syncTheme);
@@ -157,14 +170,16 @@
   };
 
   /* ── The field behind the photo ─────────────────────────
-     A masked diffusion sampler idles behind the photo. Its "data" are dots on eight lanes
-     that carry slow travelling waves. A masked dot takes the mask color and drifts as noise
-     around its slot: x = x₀ + σ·ε(t), with ε a fixed Gaussian draw plus a slow wander. Each
-     dot flips between masked and unmasked on its own clock while the share of unmasked dots
-     breathes, so the field never stops moving and never moves all at once. On load it
-     decodes with the intro, step for step, with the accent flash the text uses. Under the
-     cursor dots decode on contact and the lanes bend away from the pointer; the decoded
-     trail sinks back into noise a moment later. The button under the photo pauses it. */
+     A masked diffusion sampler idles behind the photo, and its data is the Swiss roll: the
+     spiral that diffusion models have been shown turning into noise and back since the first
+     diffusion paper (Sohl-Dickstein et al., 2015). Dots are samples along a three-turn roll
+     centred on the photo, streaming slowly outward; the inner end hides behind the photo and
+     the outer end fades out. A masked dot takes the mask color and drifts as noise around its
+     sample: x = x₀ + σ·ε(t), with ε a fixed Gaussian draw plus a slow wander. Every dot flips
+     between masked and unmasked on its own clock while the share of unmasked dots breathes,
+     so the field never stops and never moves all at once. On load it decodes with the intro,
+     step for step, with the accent flash the text uses. Under the cursor dots decode on
+     contact and the roll bends away from the pointer. The button under the photo pauses it. */
   const field = (() => {
     const intro = $('#about');
     const photo = $('#photo');
@@ -178,19 +193,18 @@
     intro.prepend(canvas);
 
     // Lengths are in photo widths (W), times in seconds.
-    const LANES = 8;          // at ±0.125, ±0.375, ±0.625 and ±0.875 W from the photo's centre
-    const LANE_GAP = 0.25;
-    const DOT_GAP = 0.075;    // along a lane
-    const REACH = 1.05;       // how far past the photo the field fades out
-    const WAVE = { amp: 0.055, length: 1.8, period: 22 };
+    const TAU = Math.PI * 2;
+    const ROLL = { from: TAU, to: 4 * TAU, outer: 1.4, end: Math.PI / 4 }; // three turns, outer end down-right
+    const GAP = 0.06;         // between samples along the roll
+    const THICK = 0.022;      // the samples' own noise across the roll, as in the dataset
+    const FLOW = 0.03;        // outward drift along the roll
     const SIGMA = 0.2;        // how far noise carries a masked dot
     const CYCLE = 30;         // mean time for one dot to go unmasked → masked → unmasked
     const BREATH = { mean: 0.72, depth: 0.12, period: 26 }; // share of unmasked dots
     const LENS = { decode: 0.5, bend: 0.45, shift: 0.05 };
-    const TAU = Math.PI * 2;
 
     const smoothstep = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-    // One seeded generator per slot, so a resize keeps every dot's noise and rhythm.
+    // One seeded generator per sample, so a resize keeps every dot's noise and rhythm.
     const seeded = (seed) => () => {
       seed = (seed + 0x6D2B79F5) | 0;
       let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -200,10 +214,25 @@
     const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(TAU * r());
     const dwell = (mean) => -Math.log(1 - Math.random()) * mean; // exponential waiting time
 
+    // Arc length of r = b·t is b·F(t), F(t) = (t·√(t²+1) + asinh t) / 2. Tabulate t against
+    // the share of length so samples can sit evenly along the roll.
+    const F = (t) => (t * Math.sqrt(t * t + 1) + Math.asinh(t)) / 2;
+    const TABLE = Array.from({ length: 513 }, (_, k) => ROLL.from + ((ROLL.to - ROLL.from) * k) / 512);
+    const SHARE = TABLE.map((t) => (F(t) - F(ROLL.from)) / (F(ROLL.to) - F(ROLL.from)));
+    const tAt = (q) => {
+      let lo = 0;
+      let hi = 512;
+      while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (SHARE[mid] <= q) lo = mid; else hi = mid; }
+      const f = (q - SHARE[lo]) / (SHARE[hi] - SHARE[lo] || 1);
+      return TABLE[lo] + (TABLE[hi] - TABLE[lo]) * f;
+    };
+    const LENGTH = (ROLL.outer / ROLL.to) * (F(ROLL.to) - F(ROLL.from)); // in W
+
     let paused = false;
     try { paused = localStorage.getItem('field') === 'paused'; } catch (_) { /* storage unavailable */ }
     const still = reducedMotion;
     let W = 200;
+    let centre = { x: 0, y: 0 };
     let dots = [];
     let area = { x: 0, y: 0, w: 1, h: 1 };
     let colors = null;
@@ -216,17 +245,37 @@
     let stepTimer = 0;
     const lens = { x: 0, y: 0, tx: 0, ty: 0, k: 0, kt: 0 };
     const share = () => BREATH.mean + BREATH.depth * Math.sin((TAU * clock) / BREATH.period);
-    const laneY = (d) => d.y + WAVE.amp * W * Math.sin((TAU * d.x) / (WAVE.length * W) - (TAU * clock) / WAVE.period + d.lane * 0.9);
 
     function readColors() {
       const cs = getComputedStyle(root);
       const rgb = (name, fallback) => (cs.getPropertyValue(name).trim() || fallback).split(/[\s,]+/).map(Number);
       colors = {
         ink: rgb('--field-ink', '52 78 156'),
-        mask: rgb('--field-mask', '132 141 161'),
+        mask: rgb('--field-mask', '118 127 148'),
         flash: rgb('--field-flash', '36 67 235'),
         alpha: parseFloat(cs.getPropertyValue('--field-alpha')) || 0.6,
       };
+    }
+
+    // Where each sample sits on the roll now: its clean position and how far along it is.
+    function place() {
+      const b = (ROLL.outer * W) / ROLL.to;
+      const turn = ROLL.end - ROLL.to;
+      const flow = FLOW / LENGTH;
+      for (const d of dots) {
+        const q = (d.q + flow * clock) % 1;
+        const t = tAt(q);
+        const r = b * t;
+        const c = Math.cos(t + turn);
+        const s = Math.sin(t + turn);
+        const tx = b * c - r * s; // tangent of r(t)·(cos, sin)
+        const ty = b * s + r * c;
+        const tl = Math.hypot(tx, ty) || 1;
+        const across = d.j * THICK * W;
+        d.cx = centre.x + r * c - (ty / tl) * across;
+        d.cy = centre.y + r * s + (tx / tl) * across;
+        d.along = smoothstep(q / 0.04) * (1 - smoothstep((q - 0.84) / 0.16)); // fade in and out at the ends
+      }
     }
 
     function layout() {
@@ -236,6 +285,7 @@
       if (!pr.width || !ir.width) return;
       W = pr.width;
       const P = { l: pr.left - ir.left, t: pr.top - ir.top, r: pr.right - ir.left, b: pr.bottom - ir.top };
+      centre = { x: (P.l + P.r) / 2, y: (P.t + P.b) / 2 };
       const stacked = tr.top >= pr.bottom - 1; // phones: the photo sits above the text
       // Keep clear of the text: right of it on wide screens, above the name on phones.
       const x0 = stacked ? 0 : Math.max(0, tr.right - ir.left + 10);
@@ -247,54 +297,39 @@
       canvas.height = Math.round(area.h * dpr);
       g.setTransform(dpr, 0, 0, dpr, -area.x * dpr, -area.y * dpr); // draw in intro coordinates
 
-      const old = new Map(dots.map((d) => [d.key, d]));
-      const gap = Math.max(10, DOT_GAP * W);
-      const reach = REACH * W;
-      const cy = (P.t + P.b) / 2;
-      const from = Math.ceil((Math.max(area.x, P.l - reach) - P.l) / gap);
-      const to = Math.floor((Math.min(area.x + area.w, P.r + reach) - P.l) / gap);
-      const p = share();
-      dots = [];
-      for (let l = 0; l < LANES; l++) {
-        const y = cy + (l - (LANES - 1) / 2) * LANE_GAP * W;
-        if (y < area.y - 0.1 * W || y > area.y + area.h + 0.1 * W) continue;
-        for (let c = from; c <= to; c++) {
-          const x = P.l + c * gap;
-          const d = Math.hypot(Math.max(P.l - x, 0, x - P.r), Math.max(P.t - y, 0, y - P.b));
-          const w = 1 - smoothstep((d - 0.1 * W) / (reach - 0.1 * W));
-          if (w < 0.02) continue;
-          const key = `${l}:${c}`;
-          let dot = old.get(key);
-          if (!dot) {
-            const r = seeded((l + 31) * 7919 + (c + 211) * 104729);
-            const masked = sampling || Math.random() > p;
-            dot = {
-              key,
-              lane: l,
-              gx: gauss(r),
-              gy: gauss(r),
-              f: [r(), r(), r(), r()].map((v) => TAU / (6 + 8 * v)),
-              ph: [r(), r(), r(), r()].map((v) => TAU * v),
-              rank: r(),
-              masked,
-              m: masked ? 1 : 0,
-              next: clock + dwell(CYCLE * (masked ? 1 - p : p)),
-              hold: -1,
-              flash: 0,
-            };
-          }
-          dot.x = x;
-          dot.y = y;
-          dot.w = w;
-          dots.push(dot);
-        }
+      const n = Math.floor(LENGTH / Math.max(GAP, 10 / W));
+      if (dots.length !== n) {
+        const old = dots;
+        const p = share();
+        dots = Array.from({ length: n }, (_, i) => {
+          if (old[i]) return old[i];
+          const r = seeded(i * 7919 + 104729);
+          const masked = sampling || Math.random() > p;
+          return {
+            offset: 0.15 + 0.7 * r(),
+            j: gauss(r),
+            gx: gauss(r),
+            gy: gauss(r),
+            f: [r(), r(), r(), r()].map((v) => TAU / (6 + 8 * v)),
+            ph: [r(), r(), r(), r()].map((v) => TAU * v),
+            rank: r(),
+            masked,
+            m: masked ? 1 : 0,
+            next: clock + dwell(CYCLE * (masked ? 1 - p : p)),
+            hold: -1,
+            flash: 0,
+          };
+        });
+        dots.forEach((d, i) => { d.q = (i + d.offset) / n; }); // even along the roll, not on a ruler
       }
+      place();
       draw();
     }
 
     function step(dt) {
       const p = share();
       const touch = LENS.decode * W;
+      place();
       for (const d of dots) {
         if (sampling) {
           const want = d.rank >= decodeShare;
@@ -305,7 +340,7 @@
           d.next = clock + dwell(CYCLE * (d.masked ? 1 - p : p));
         }
         // The cursor decodes what it touches and holds it there for a moment.
-        if (lens.k > 0.3 && Math.hypot(d.x - lens.x, laneY(d) - lens.y) < touch) {
+        if (lens.k > 0.3 && Math.hypot(d.cx - lens.x, d.cy - lens.y) < touch) {
           if (d.m > 0.5 && d.hold < clock) d.flash = 1;
           d.hold = clock + 0.7 + 0.6 * d.rank;
         }
@@ -331,8 +366,8 @@
         const clean = 1 - mm;
         const ex = d.gx + 0.45 * Math.sin(d.f[0] * t + d.ph[0]) + 0.3 * Math.sin(d.f[1] * t + d.ph[1]);
         const ey = d.gy + 0.45 * Math.sin(d.f[2] * t + d.ph[2]) + 0.3 * Math.sin(d.f[3] * t + d.ph[3]);
-        let x = d.x + sigma * ex * mm;
-        let y = laneY(d) + sigma * ey * mm;
+        let x = d.cx + sigma * ex * mm;
+        let y = d.cy + sigma * ey * mm;
         let near = 0;
         if (lens.k > 0.002) {
           const dx = x - lens.x;
@@ -344,8 +379,8 @@
             y += (dy / dist) * shift * near;
           }
         }
-        // Fade at the edges of the area, wherever the dot has drifted to.
-        const fade = d.w
+        // Fade at the ends of the roll and at the edges of the area, wherever the dot has drifted.
+        const fade = d.along
           * smoothstep((x - area.x) / edge) * smoothstep((area.x + area.w - x) / edge)
           * smoothstep((y - area.y) / edge) * smoothstep((area.y + area.h - y) / edge);
         if (fade < 0.01) continue;
