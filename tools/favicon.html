@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tab icon</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&display=block">
+<style>
+  body { margin: 24px; background: #9AA0AA; font: 14px/1.5 system-ui, sans-serif; }
+  img { margin: 8px; }
+</style>
+</head>
+<body>
+<p>Draws the tab icon (assets/favicon.png, 32 × 32), the home-screen icon
+(assets/apple-touch-icon.png, 180 × 180), and the strip of decoding frames
+(assets/favicon-frames.png, nine 64 × 64 frames) that main.js steps through while the page
+decodes. See README for how to export.</p>
+<script>
+  // Seungwoo Lyu's initials on the dark tile, in the site's typeface. Per initial, state 0 is
+  // masked (a grey bar where the letter sits), 1 just decoded (accent), 2 settled.
+  function drawInitials(g, size, state, rounded = true) {
+    const r = rounded ? (size * 15) / 64 : 0;
+    g.clearRect(0, 0, size, size);
+    g.fillStyle = '#0E1116';
+    g.beginPath();
+    g.roundRect(0, 0, size, size, r);
+    g.fill();
+    if (rounded) {
+      g.strokeStyle = 'rgba(255, 255, 255, 0.12)'; // a faint rim, so the tile reads on a dark tab strip
+      g.lineWidth = size / 64;
+      g.beginPath();
+      g.roundRect(size / 128, size / 128, size - size / 64, size - size / 64, r);
+      g.stroke();
+    }
+    g.font = `600 semi-condensed ${size * 0.56}px "Instrument Sans"`;
+    if (!g.font.includes('Instrument')) g.font = `600 ${size * 0.56}px "Instrument Sans"`; // no width keyword support
+    const wS = g.measureText('S').width;
+    const wL = g.measureText('L').width;
+    const gap = -0.035 * size;
+    const x0 = (size - (wS + gap + wL)) / 2;
+    const cap = g.measureText('S').actualBoundingBoxAscent;
+    const base = (size + cap) / 2;
+    [['S', x0, wS], ['L', x0 + wS + gap, wL]].forEach(([ch, x, w], i) => {
+      if (state[i] === 0) {
+        g.fillStyle = '#3A4254';
+        g.beginPath();
+        g.roundRect(x + w * 0.08, base - cap * 0.8, w * 0.84, cap * 0.6, size * 0.03);
+        g.fill();
+        return;
+      }
+      g.fillStyle = state[i] === 1 ? '#93A6FF' : '#E8EBF1';
+      g.fillText(ch, x, base);
+    });
+  }
+  // Rendered large and scaled down afterwards, so the small icon stays smooth.
+  const render = (state, rounded) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    drawInitials(c.getContext('2d'), 256, state, rounded);
+    return c.toDataURL();
+  };
+  // The decoding strip: frame s·3 + l holds S in state s and L in state l.
+  const strip = () => {
+    const c = document.createElement('canvas');
+    c.width = 9 * 256;
+    c.height = 256;
+    const g = c.getContext('2d');
+    for (let k = 0; k < 9; k++) {
+      const one = document.createElement('canvas');
+      one.width = one.height = 256;
+      drawInitials(one.getContext('2d'), 256, [Math.floor(k / 3), k % 3], true);
+      g.drawImage(one, k * 256, 0);
+    }
+    return c.toDataURL();
+  };
+  window.icons = () => document.fonts.load('600 40px "Instrument Sans"').then(() => ({
+    favicon: render([2, 2], true),
+    touch: render([2, 2], false),
+    strip: strip(),
+  }));
+  window.icons().then((icons) => [icons.favicon, icons.touch, icons.strip].forEach((src) => {
+    const img = new Image();
+    img.src = src;
+    img.width = 64;
+    document.body.appendChild(img);
+  }));
+</script>
+</body>
+</html>

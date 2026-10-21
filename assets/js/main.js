@@ -420,6 +420,12 @@
       document.title = shown.join('');
     }, () => { document.title = final; });
   }
+  // The icon decodes with the name: both initials start masked, and each arrives in the accent
+  // color before it settles, like the letters on the page. The frames come from one strip drawn
+  // by tools/favicon.html (frame s·3 + l holds S in state s and L in state l: 0 masked, 1 just
+  // decoded, 2 settled), so no typeface has to load for it.
+  const iconFrames = new Image();
+  iconFrames.src = 'assets/favicon-frames.png';
   function decodeFavicon() {
     const link = $('link[rel="icon"]');
     const canvas = document.createElement('canvas');
@@ -427,30 +433,27 @@
     if (!link || !g) return;
     const original = link.getAttribute('href');
     canvas.width = canvas.height = 64;
-    // Same drawing as assets/favicon.svg; every bar starts as a mask.
-    const MASK = '#3A4254';
-    const bars = [
-      { x: 11, y: 20, w: 24, color: '#93A6FF' },
-      { x: 39, y: 20, w: 14, color: MASK },
-      { x: 11, y: 34, w: 14, color: MASK },
-      { x: 29, y: 34, w: 24, color: '#E8EBF1' },
-    ];
-    const done = new Set();
-    const box = (x, y, w, h, r) => {
-      g.beginPath();
-      if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h);
-      g.fill();
-    };
-    const draw = () => {
+    const state = [0, 0];
+    const paint = () => {
       g.clearRect(0, 0, 64, 64);
-      g.fillStyle = '#0E1116';
-      box(0, 0, 64, 64, 15);
-      bars.forEach((b, i) => { g.fillStyle = done.has(i) ? b.color : MASK; box(b.x, b.y, b.w, 10, 3); });
+      g.drawImage(iconFrames, (state[0] * 3 + state[1]) * 64, 0, 64, 64, 0, 0, 64, 64);
       link.setAttribute('href', canvas.toDataURL('image/png'));
     };
-    draw();
-    schedule(bars.length, INTRO, (i) => { done.add(i); draw(); }, () => {
-      setTimeout(() => link.setAttribute('href', original), 300);
+    const ready = iconFrames.complete && iconFrames.naturalWidth
+      ? Promise.resolve(true)
+      : new Promise((resolve) => {
+        iconFrames.addEventListener('load', () => resolve(true), { once: true });
+        iconFrames.addEventListener('error', () => resolve(false), { once: true });
+        setTimeout(() => resolve(false), 1500);
+      });
+    ready.then((ok) => {
+      if (!ok) return;
+      paint();
+      schedule(2, INTRO, (i) => {
+        state[i] = 1;
+        paint();
+        setTimeout(() => { state[i] = 2; paint(); }, 220);
+      }, () => setTimeout(() => link.setAttribute('href', original), 500));
     });
   }
 
