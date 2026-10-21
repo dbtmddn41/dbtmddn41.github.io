@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seungwoo Lyu</title>
+<meta name="description" content="Seungwoo Lyu is an undergraduate researcher at Korea University working on multimodal learning, diffusion models, and diffusion language models.">
+<meta name="author" content="Seungwoo Lyu">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="Seungwoo Lyu">
+<meta property="og:description" content="Undergraduate researcher at Korea University working on multimodal learning, diffusion models, and diffusion language models.">
+<meta property="og:image" content="assets/img/profile.jpg">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" id="theme-color" content="#F8F9FA">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500&text=%EC%9C%A0%EC%8A%B9%EC%9A%B0&display=swap">
+<link rel="stylesheet" href="assets/css/style.css?v=20261022d">
+<script>
+  (function () {
+    var root = document.documentElement;
+    try {
+      var savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') root.setAttribute('data-theme', savedTheme);
+    } catch (e) {}
+    // Keep the photo covered until its mask tiles exist (released right after the intro).
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!still && location.hash.length <= 1) {
+      root.classList.add('decode-pending');
+      setTimeout(function () { root.classList.remove('decode-pending'); }, 3000);
+    }
+  })();
+</script>
+<script src="assets/js/main.js?v=20261022d" defer></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Seungwoo Lyu",
+  "alternateName": "유승우",
+  "jobTitle": "Undergraduate Researcher",
+  "image": "assets/img/profile.jpg",
+  "affiliation": { "@type": "CollegeOrUniversity", "name": "Korea University" },
+  "sameAs": [
+    "https://github.com/dbtmddn41",
+    "https://www.linkedin.com/in/seungwoo-lyu-7bab9a290/"
+  ],
+  "knowsAbout": ["Multimodal learning", "Diffusion models", "Diffusion language models", "KV cache compression"]
+}
+</script>
+</head>
+<body id="top">
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <div class="header-inner">
+      <a class="wordmark" href="#top" title="Decodes in 14 masked-diffusion steps (cosine schedule)">
+        <svg class="mark" viewBox="0 0 20 20" aria-hidden="true">
+          <rect class="mk-a" x="1" y="4.5" width="10" height="4.5" rx="1.6"/>
+          <rect class="mk-m" x="12.5" y="4.5" width="6.5" height="4.5" rx="1.6"/>
+          <rect class="mk-m" x="1" y="11" width="6.5" height="4.5" rx="1.6"/>
+          <rect class="mk-i" x="9" y="11" width="10" height="4.5" rx="1.6"/>
+        </svg>
+        Seungwoo Lyu
+      </a>
+      <nav class="nav" id="site-nav" aria-label="Sections">
+        <ul>
+          <li><a href="#about">About</a></li>
+          <li><a href="#publications">Publications</a></li>
+          <li><a href="#experience">Experience</a></li>
+          <li><a href="#education">Education</a></li>
+          <li><a href="#honors">Honors</a></li>
+        </ul>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" id="search-open" type="button" aria-label="Search the page (⌘K)" title="Search (⌘K)" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+        </button>
+        <button class="icon-btn theme-btn" id="theme-toggle" type="button" aria-label="Switch to dark theme">
+          <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6Z"/></svg>
+          <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
+        </button>
+        <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 8.5h16M4 15.5h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ── About ────────────────────────────────────────────── -->
+  <section class="intro" id="about" aria-labelledby="name">
+    <div class="wrap">
+      <div class="intro-grid">
+        <div class="intro-text">
+          <h1 class="name" id="name" data-decode>Seungwoo Lyu <span class="ko" lang="ko">유승우</span></h1>
+          <p class="position" data-decode>Undergraduate Researcher, Korea University</p>
+          <div class="bio" data-decode="words">
+            <p>I am a final-year undergraduate at Korea University, majoring in Smart Security with a double major in Data Science. I am a research intern at the Multimodal Interactive Intelligence Laboratory (MIIL), working with Prof. Paul Hongsuck Seo.</p>
+            <p>My research interests include multimodal learning, diffusion models and diffusion language models, and efficient inference for large language models such as KV cache compression.</p>
+            <p>Previously, I was a software developer intern at NAVER and an exchange student in Computer Sciences at the University of Wisconsin–Madison.</p>
+          </div>
+          <ul class="links" aria-label="Contact and profiles">
+            <li class="email-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg>
+              <a class="email" data-u="dbtmddn41" data-d="gmail.com"><span class="email-text">dbtmddn41 [at] gmail.com</span></a>
+              <button class="copy-btn" type="button" data-copy-email aria-label="Copy email address" title="Copy" hidden>
+                <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/></svg>
+                <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+              </button>
+            </li>
+            <li>
+              <a href="https://github.com/dbtmddn41" target="_blank" rel="noopener">
+                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                GitHub
+              </a>
+            </li>
+            <li>
+              <a href="https://www.linkedin.com/in/seungwoo-lyu-7bab9a290/" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM3.3 9h3.4v11.5H3.3V9Zm5.6 0h3.3v1.6h.05c.46-.87 1.58-1.8 3.26-1.8 3.48 0 4.12 2.3 4.12 5.27v6.43h-3.4v-5.7c0-1.36-.03-3.1-1.89-3.1-1.9 0-2.18 1.48-2.18 3v5.8H8.9V9Z"/></svg>
+                LinkedIn
+              </a>
+            </li>
+            <!-- Add when ready:
+            <li><a href="assets/cv.pdf" target="_blank" rel="noopener">CV</a></li>
+            <li><a href="https://scholar.google.com/citations?user=YOUR_ID" target="_blank" rel="noopener">Google Scholar</a></li>
+            -->
+          </ul>
+        </div>
+        <!-- The photo decodes out of mask tiles on load, together with the name. -->
+        <figure class="photo" id="photo">
+          <div class="photo-fallback" aria-hidden="true">SL</div>
+          <img src="assets/img/profile.jpg" alt="Photo of Seungwoo Lyu" width="800" height="800" decoding="async" onerror="this.remove()">
+          <span class="photo-tiles" id="photo-tiles" aria-hidden="true"></span>
+        </figure>
+      </div>
+    </div>
+  </section>
+  <script>
+    /* Before first paint: split the name and position into subword tokens and the bio into
+       word tokens, lay an 8 × 8 grid of mask tiles over the photo, and mask all of it.
+       main.js decodes them together like a masked diffusion model. The same tokenizer is
+       reused by main.js for section titles. */
+    (function () {
+      var root = document.documentElement;
+      function chunks(word) {
+        if (word.length <= 5) return [word];
+        var out = [], i = 0;
+        while (i < word.length) {
+          var rest = word.length - i;
+          var size = rest <= 6 ? rest : (rest % 4 === 1 ? 3 : 4);
+          out.push(word.slice(i, i + size));
+          i += size;
+        }
+        return out;
+      }
+      function tokenize(el) {
+        var whole = el.getAttribute('data-decode') === 'words';
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), nodes = [], node;
+        while ((node = walker.nextNode())) nodes.push(node);
+        nodes.forEach(function (textNode) {
+          var frag = document.createDocumentFragment();
+          textNode.nodeValue.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+            var word = document.createElement('span');
+            word.className = 'word';
+            (whole ? [part] : chunks(part)).forEach(function (c) {
+              var tok = document.createElement('span');
+              tok.className = 'tok';
+              tok.textContent = c;
+              word.appendChild(tok);
+            });
+            frag.appendChild(word);
+          });
+          textNode.parentNode.replaceChild(frag, textNode);
+        });
+      }
+      window.__tokenize = tokenize;
+      if (document.createTreeWalker) {
+        var texts = document.querySelectorAll('[data-decode]:not([data-decode="view"])');
+        for (var t = 0; t < texts.length; t++) tokenize(texts[t]);
+      }
+      var grid = document.getElementById('photo-tiles');
+      if (grid) {
+        for (var i = 0; i < 64; i++) {
+          var tile = document.createElement('span');
+          tile.className = 'ptile';
+          tile.style.setProperty('--n', Math.random().toFixed(2));
+          grid.appendChild(tile);
+        }
+      }
+      if (root.classList.contains('decode-pending')) {
+        var units = document.querySelectorAll('#about .tok, #photo-tiles .ptile');
+        for (var k = 0; k < units.length; k++) units[k].classList.add('is-masked');
+        root.setAttribute('data-intro-masked', 'true');
+        setTimeout(function () {
+          if (window.__decodeStarted) return;
+          for (var j = 0; j < units.length; j++) units[j].classList.remove('is-masked');
+        }, 3000);
+      }
+      root.classList.remove('decode-pending');
+    })();
+  </script>
+
+  <!-- ── Publications ─────────────────────────────────────────
+       Newest first. To add a paper, copy one <li class="pub"> block.
+       Thumbnail: the first <img> is shown; an optional second one (class "thumb-alt")
+       appears on hover; a click opens both figures in the viewer. -->
+  <section class="section" id="publications" aria-labelledby="pubs-title">
+    <div class="wrap">
+      <h2 class="section-title" id="pubs-title"><span data-decode="view">Publications</span></h2>
+
+      <h3 class="group-title">Conference papers</h3>
+      <ol class="pubs">
+
+        <li class="pub" id="pub-taskvec">
+          <a class="pub-thumb" href="assets/img/pubs/taskvec.webp" data-figure
+             data-caption="Revisiting Task Vectors, Figure 1: a task vector extracted with a reference request is injected into a zero-shot target request. Incomplete reproduction of the full-context latents leaves a representation gap that drives a behavioral gap."
+             aria-label="View the Revisiting Task Vectors figure">
+            <img src="assets/img/pubs/taskvec.webp" alt="Diagram of task vector extraction from full-context latents and injection into a target request, with representation and behavioral gaps" width="1062" height="1362" loading="lazy" decoding="async" style="object-position: 50% 32%">
+          </a>
+          <div class="pub-body">
+            <h4 class="pub-title">Revisiting Task Vectors: A Structural Analysis of Their Limits</h4>
+            <p class="pub-authors">Leekyeung Han, Hyeseung Ji, Sangwon Jung, <b class="me">Seungwoo Lyu</b>, Paul Hongsuck Seo</p>
+            <p class="pub-venue is-accepted"><em>Findings of EMNLP 2026</em></p>
+            <div class="pub-links">
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-taskvec" hidden>TL;DR</button>
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="bib-taskvec" hidden>BibTeX</button>
+            </div>
+            <p class="tldr" id="tldr-taskvec" hidden>Derives a best-case bound, the Minimal-Gap Approximation, by decomposing self-attention, and shows that task vectors are structurally limited by attention and length gaps.</p>
+            <div class="bib" id="bib-taskvec" hidden>
+<pre><code>@inproceedings{han2026revisiting,
+  title     = {Revisiting Task Vectors: A Structural Analysis of Their Limits},
+  author    = {Han, Leekyeung and Ji, Hyeseung and Jung, Sangwon and Lyu, Seungwoo and Seo, Paul Hongsuck},
+  booktitle = {Findings of the Association for Computational Linguistics: EMNLP 2026},
+  year      = {2026}
+}</code></pre>
+              <button class="bib-copy" type="button">Copy</button>
+            </div>
+          </div>
+        </li>
+
+        <li class="pub" id="pub-ddspo">
+          <a class="pub-thumb" href="assets/img/pubs/ddspo.webp" data-figure
+             data-caption="DDSPO: SDXL (left of each pair) and SDXL fine-tuned with DDSPO (right) on text–image alignment prompts. From the project page."
+             data-alt="assets/img/pubs/ddspo-2.webp"
+             data-alt-caption="DDSPO: Diffusion-DPO (left of each pair) and DDSPO (right) on aesthetic preference. From the project page."
+             aria-label="View the DDSPO figures">
+            <img src="assets/img/pubs/ddspo.webp" alt="Pairs of images generated by SDXL and by SDXL fine-tuned with DDSPO" width="694" height="816" loading="lazy" decoding="async" style="object-position: 50% 0%">
+            <img class="thumb-alt" src="assets/img/pubs/ddspo-2.webp" alt="" width="705" height="801" loading="lazy" decoding="async" style="object-position: 50% 0%">
+          </a>
+          <div class="pub-body">
+            <h4 class="pub-title"><a href="https://arxiv.org/abs/2512.23426" target="_blank" rel="noopener">Direct Diffusion Score Preference Optimization via Stepwise Contrastive Policy-Pair Supervision</a></h4>
+            <p class="pub-authors">Dohyun Kim, <b class="me">Seungwoo Lyu</b>, Seung Wook Kim, Paul Hongsuck Seo</p>
+            <p class="pub-venue is-accepted"><em>ECCV 2026</em></p>
+            <div class="pub-links">
+              <a class="tag-btn" href="https://arxiv.org/abs/2512.23426" target="_blank" rel="noopener">arXiv</a>
+              <a class="tag-btn" href="https://dohyun-as.github.io/DDSPO/" target="_blank" rel="noopener">Project</a>
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-ddspo" hidden>TL;DR</button>
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="bib-ddspo" hidden>BibTeX</button>
+            </div>
+            <p class="tldr" id="tldr-ddspo" hidden>Gives a diffusion model preference supervision at every denoising step, using a contrasting pair of winning and losing policies.</p>
+            <div class="bib" id="bib-ddspo" hidden>
+<pre><code>@inproceedings{kim2026ddspo,
+  title     = {Direct Diffusion Score Preference Optimization via Stepwise Contrastive Policy-Pair Supervision},
+  author    = {Kim, Dohyun and Lyu, Seungwoo and Kim, Seung Wook and Seo, Paul Hongsuck},
+  booktitle = {European Conference on Computer Vision (ECCV)},
+  year      = {2026}
+}</code></pre>
+              <button class="bib-copy" type="button">Copy</button>
+            </div>
+          </div>
+        </li>
+
+        <li class="pub" id="pub-crit">
+          <a class="pub-thumb" href="assets/img/pubs/crit.webp" data-figure
+             data-caption="CRIT, Figure 1: an example where answering the question requires hopping between the interleaved text and images."
+             data-alt="assets/img/pubs/crit-2.webp"
+             data-alt-caption="CRIT, Figure 2: the data synthesis pipeline, from scene graphs and generated text nodes to sampled subgraphs and question–answer pairs."
+             aria-label="View the CRIT figures">
+            <img src="assets/img/pubs/crit.webp" alt="CRIT example with interleaved image and text context, a question, a chain of thought, and the answer" width="1595" height="615" loading="lazy" decoding="async" style="object-position: 0% 50%">
+            <img class="thumb-alt" src="assets/img/pubs/crit-2.webp" alt="" width="1544" height="535" loading="lazy" decoding="async" style="object-position: 0% 50%">
+          </a>
+          <div class="pub-body">
+            <h4 class="pub-title"><a href="https://arxiv.org/abs/2604.01634" target="_blank" rel="noopener">CRIT: Graph-Based Automatic Data Synthesis to Enhance Cross-Modal Multi-Hop Reasoning</a></h4>
+            <p class="pub-authors">Junyoung Sung, <b class="me">Seungwoo Lyu</b>, Minjun Kim, Sumin An, Arsha Nagrani, Paul Hongsuck Seo</p>
+            <p class="pub-venue is-accepted"><em>CVPR 2026</em></p>
+            <div class="pub-links">
+              <a class="tag-btn" href="https://arxiv.org/abs/2604.01634" target="_blank" rel="noopener">arXiv</a>
+              <a class="tag-btn" href="https://cvpr.thecvf.com/virtual/2026/poster/39273" target="_blank" rel="noopener">Poster</a>
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-crit" hidden>TL;DR</button>
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="bib-crit" hidden>BibTeX</button>
+            </div>
+            <p class="tldr" id="tldr-crit" hidden>Synthesizes interleaved image–text questions from multimodal content graphs so that answering requires hops across both modalities.</p>
+            <div class="bib" id="bib-crit" hidden>
+<pre><code>@inproceedings{sung2026crit,
+  title     = {{CRIT}: Graph-Based Automatic Data Synthesis to Enhance Cross-Modal Multi-Hop Reasoning},
+  author    = {Sung, Junyoung and Lyu, Seungwoo and Kim, Minjun and An, Sumin and Nagrani, Arsha and Seo, Paul Hongsuck},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2026}
+}</code></pre>
+              <button class="bib-copy" type="button">Copy</button>
+            </div>
+          </div>
+        </li>
+
+      </ol>
+
+      <h3 class="group-title">Preprints</h3>
+      <ol class="pubs">
+
+        <li class="pub" id="pub-elastic">
+          <a class="pub-thumb" href="assets/img/pubs/elastic-mdm.webp" data-figure
+             data-caption="Elastic-MDM, Figure 1: in the forward process tokens are masked and then removed; in reverse, a single pass denoises masks and predicts gap counts, and a scheduler inserts masks, so the output length can vary."
+             aria-label="View the Elastic-MDM figure">
+            <img class="is-contain" src="assets/img/pubs/elastic-mdm.webp" alt="Elastic-MDM overview with forward masking and removal, and one-step backward processing with a denoiser, gap-count predictor, and scheduler" width="1700" height="793" loading="lazy" decoding="async">
+          </a>
+          <div class="pub-body">
+            <h4 class="pub-title">Elastic-MDM: Efficient Masked Diffusion Models with Variable Sequence Lengths</h4>
+            <p class="pub-authors"><b class="me">Seungwoo Lyu</b>, et al.</p>
+            <p class="pub-venue"><em>Manuscript</em></p>
+            <div class="pub-links">
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-elastic" hidden>TL;DR</button>
+            </div>
+            <p class="tldr" id="tldr-elastic" hidden>Makes removed tokens an absorbing state that the Transformer never encodes, and predicts how many to reactivate between unmasked tokens, which cuts decoding time and lets the output length vary.</p>
+          </div>
+        </li>
+
+        <li class="pub" id="pub-osi">
+          <a class="pub-thumb" href="assets/img/pubs/opensafeintent.webp" data-figure
+             data-caption="OpenSafeIntent, Figure 1: one prompt-set keeps the harm domain, task type, and underlying task fixed and varies only the intent (benign, dual-use, malicious)."
+             data-alt="assets/img/pubs/opensafeintent-2.webp"
+             data-alt-caption="OpenSafeIntent, Figure 3 (left): triplet safety by task type and harm domain, averaged across models."
+             aria-label="View the OpenSafeIntent figures">
+            <img class="is-contain" src="assets/img/pubs/opensafeintent.webp" alt="An OpenSafeIntent prompt-set with benign, dual-use, and malicious versions of one task" width="1464" height="654" loading="lazy" decoding="async">
+            <img class="thumb-alt is-contain" src="assets/img/pubs/opensafeintent-2.webp" alt="" width="1130" height="494" loading="lazy" decoding="async">
+          </a>
+          <div class="pub-body">
+            <h4 class="pub-title"><a href="https://arxiv.org/abs/2607.02047" target="_blank" rel="noopener">OpenSafeIntent: Evaluating Intent-Calibrated Safe Completion Across Dual-Use Prompt Sets</a></h4>
+            <p class="pub-authors">Rheeya Uppaal, <b class="me">Seungwoo Lyu</b>, Selina Sung, Junjie Hu</p>
+            <p class="pub-venue"><em>arXiv preprint, 2026</em></p>
+            <div class="pub-links">
+              <a class="tag-btn" href="https://arxiv.org/abs/2607.02047" target="_blank" rel="noopener">arXiv</a>
+              <a class="tag-btn" href="https://github.com/Uppaal/OpenSafeIntent" target="_blank" rel="noopener">Code</a>
+              <a class="tag-btn" href="https://huggingface.co/datasets/Uppaal/OpenSafeIntent" target="_blank" rel="noopener">Dataset</a>
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="tldr-osi" hidden>TL;DR</button>
+              <button class="tag-btn toggle-btn" type="button" aria-expanded="false" aria-controls="bib-osi" hidden>BibTeX</button>
+            </div>
+            <p class="tldr" id="tldr-osi" hidden>A benchmark of matched benign, dual-use, and malicious prompt sets that tests whether a model’s help adapts to the intent behind a request.</p>
+            <div class="bib" id="bib-osi" hidden>
+<pre><code>@article{uppaal2026opensafeintent,
+  title   = {{OpenSafeIntent}: Evaluating Intent-Calibrated Safe Completion Across Dual-Use Prompt Sets},
+  author  = {Uppaal, Rheeya and Lyu, Seungwoo and Sung, Selina and Hu, Junjie},
+  journal = {arXiv preprint arXiv:2607.02047},
+  year    = {2026}
+}</code></pre>
+              <button class="bib-copy" type="button">Copy</button>
+            </div>
+          </div>
+        </li>
+
+      </ol>
+    </div>
+  </section>
+
+  <!-- ── Experience ───────────────────────────────────────── -->
+  <section class="section" id="experience" aria-labelledby="exp-title">
+    <div class="wrap">
+      <h2 class="section-title" id="exp-title"><span data-decode="view">Experience</span></h2>
+      <ul class="entries">
+        <li class="entry">
+          <div class="entry-head">
+            <h3 class="entry-title">Multimodal Interactive Intelligence Laboratory (MIIL), Korea University</h3>
+            <span class="entry-date">Dec 2024 – <span class="now">Present</span></span>
+          </div>
+          <p class="entry-role">Undergraduate Research Intern</p>
+          <ul class="entry-points">
+            <li>Research on multimodal reasoning, graph-based data synthesis, diffusion language models, and KV cache compression.</li>
+            <li>Built automated evaluation and quality-check pipelines for safety and reasoning datasets.</li>
+            <li>Worked on preference optimization and scalable training pipelines for large language models.</li>
+          </ul>
+        </li>
+        <li class="entry">
+          <div class="entry-head">
+            <h3 class="entry-title">NAVER, Physical Intelligence Agent Dev Team</h3>
+            <span class="entry-date">Jul 2026 – Aug 2026</span>
+          </div>
+          <p class="entry-role">Software Developer Intern</p>
+          <ul class="entry-points">
+            <li>Built end-to-end RAG and dialogue evaluation pipelines for a robot operations AI agent.</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Education ────────────────────────────────────────── -->
+  <section class="section" id="education" aria-labelledby="edu-title">
+    <div class="wrap">
+      <h2 class="section-title" id="edu-title"><span data-decode="view">Education</span></h2>
+      <ul class="entries">
+        <li class="entry">
+          <div class="entry-head">
+            <h3 class="entry-title">Korea University, Seoul, South Korea</h3>
+            <span class="entry-date">Mar 2021 – Feb 2027 (expected)</span>
+          </div>
+          <p class="entry-role">B.S. in Smart Security, Double Major in Data Science</p>
+          <p class="entry-meta">GPA 4.32 / 4.5 (98.2 / 100)</p>
+        </li>
+        <li class="entry">
+          <div class="entry-head">
+            <h3 class="entry-title">University of Wisconsin–Madison, Madison, WI, USA</h3>
+            <span class="entry-date">Spring 2026</span>
+          </div>
+          <p class="entry-role">Exchange Student, Computer Sciences</p>
+          <p class="entry-meta">GPA 4.0 / 4.0</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Honors ───────────────────────────────────────────── -->
+  <section class="section" id="honors" aria-labelledby="honors-title">
+    <div class="wrap">
+      <h2 class="section-title" id="honors-title"><span data-decode="view">Honors &amp; Awards</span></h2>
+      <ul class="lines">
+        <li><span>Korea–U.S. Youth Exchange Program in Advanced Fields, 4th Cohort</span><span class="line-date">2026</span></li>
+        <li><span>Academic Merit Scholarship</span><span class="line-date">Fall 2025</span></li>
+        <li><span>Academic Excellence Scholarship</span><span class="line-date">Spring 2025</span></li>
+        <li><span>Kaggle, Home Credit: Credit Risk Model Stability, Silver Medal <span class="muted">(122 / 3,856)</span></span><span class="line-date">2024</span></li>
+        <li><span>Kaggle, LLM Prompt Recovery <span class="muted">(260 / 2,175)</span></span><span class="line-date">2024</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Activities ───────────────────────────────────────── -->
+  <section class="section" id="activities" aria-labelledby="act-title">
+    <div class="wrap">
+      <h2 class="section-title" id="act-title"><span data-decode="view">Activities</span></h2>
+      <ul class="lines">
+        <li><span>LG Aimers, 5th Cohort <span class="muted">· LG</span></span><span class="line-date">Jul 2024 – Sep 2024</span></li>
+        <li><span>Google Machine Learning Bootcamp <span class="muted">· Google</span></span><span class="line-date">Sep 2023 – Nov 2023</span></li>
+        <li><span>42 Seoul <span class="muted">· Innovation Academy</span></span><span class="line-date">Sep 2021 – Aug 2022</span></li>
+        <li><span>CyKor <span class="muted">· Korea University cybersecurity club</span></span><span class="line-date">Mar 2021 – Sep 2022</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Military service ─────────────────────────────────── -->
+  <section class="section" id="military" aria-labelledby="mil-title">
+    <div class="wrap">
+      <h2 class="section-title" id="mil-title"><span data-decode="view">Military Service</span></h2>
+      <ul class="lines">
+        <li><span>Republic of Korea Air Force, Cyber Operations Center <span class="muted">· Sergeant, honorable discharge</span></span><span class="line-date">Sep 2022 – Jun 2024</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Skills ───────────────────────────────────────────── -->
+  <section class="section" id="skills" aria-labelledby="skills-title">
+    <div class="wrap">
+      <h2 class="section-title" id="skills-title"><span data-decode="view">Skills</span></h2>
+      <dl class="skills">
+        <div><dt>Languages</dt><dd>Python, C, C++, Go, SQL</dd></div>
+        <div><dt>Frameworks</dt><dd>PyTorch, TensorFlow, Hugging Face Transformers, vLLM</dd></div>
+        <div><dt>Tools</dt><dd>Git, Linux, Docker, HTCondor</dd></div>
+      </dl>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <p>© 2026 Seungwoo Lyu · Last updated October 2026</p>
+      <p class="footer-meta"><span id="clock" hidden>Seoul <time id="seoul-time">--:--</time></span></p>
+    </div>
+  </div>
+</footer>
+
+<button class="to-top" id="to-top" type="button" aria-label="Back to top" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+</button>
+
+<dialog class="viewer" id="viewer" aria-labelledby="viewer-caption">
+  <div class="viewer-bar">
+    <span class="viewer-count" id="viewer-count"></span>
+    <div class="viewer-actions">
+      <button class="icon-btn" id="viewer-prev" type="button" aria-label="Previous figure">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+      </button>
+      <button class="icon-btn" id="viewer-next" type="button" aria-label="Next figure">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+      <button class="icon-btn" id="viewer-close" type="button" aria-label="Close figure">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+  </div>
+  <img id="viewer-img" alt="">
+  <p class="viewer-caption" id="viewer-caption"></p>
+</dialog>
+
+<dialog class="palette" id="palette" aria-label="Search">
+  <div class="palette-field">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+    <input id="palette-input" type="text" placeholder="Search sections, papers, and links" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list">
+    <kbd>esc</kbd>
+  </div>
+  <ul class="palette-list" id="palette-list" role="listbox" aria-label="Results"></ul>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
