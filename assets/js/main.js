@@ -162,7 +162,7 @@
 
   const introTokens = $$('#about .tok');
   const tiles = $$('#photo-tiles .ptile');
-  const INTRO = { steps: 14, stepMs: 80, delay: 220 };
+  const INTRO = { steps: 10, stepMs: 70, delay: 100 }; // only the name, the position and the photo: brisk
   const TITLE = { steps: 7, stepMs: 60, delay: 40 };
   const decodeIntro = (delay = INTRO.delay) => {
     decode([introTokens, tiles], { ...INTRO, delay });
