@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500&text=%EC%9C%A0%EC%8A%B9%EC%9A%B0&display=swap">
-<link rel="stylesheet" href="assets/css/style.css?v=20261022e">
+<link rel="stylesheet" href="assets/css/style.css?v=20261022f">
 <script>
   (function () {
     var root = document.documentElement;
@@ -38,7 +38,7 @@
     }
   })();
 </script>
-<script src="assets/js/main.js?v=20261022e" defer></script>
+<script src="assets/js/main.js?v=20261022f" defer></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -133,12 +133,20 @@
             -->
           </ul>
         </div>
-        <!-- The photo decodes out of mask tiles on load, together with the name. -->
-        <figure class="photo" id="photo">
-          <div class="photo-fallback" aria-hidden="true">SL</div>
-          <img src="assets/img/profile.jpg" alt="Photo of Seungwoo Lyu" width="800" height="800" decoding="async" onerror="this.remove()">
-          <span class="photo-tiles" id="photo-tiles" aria-hidden="true"></span>
-        </figure>
+        <!-- The photo decodes out of mask tiles on load, together with the name. Behind it,
+             main.js runs a field of dots as an idle masked diffusion sampler; the button
+             under the photo pauses it. -->
+        <div class="photo-col">
+          <figure class="photo" id="photo">
+            <div class="photo-fallback" aria-hidden="true">SL</div>
+            <img src="assets/img/profile.jpg" alt="Photo of Seungwoo Lyu" width="800" height="800" decoding="async" onerror="this.remove()">
+            <span class="photo-tiles" id="photo-tiles" aria-hidden="true"></span>
+          </figure>
+          <button class="field-toggle" id="field-toggle" type="button" aria-pressed="false" aria-label="Pause the background animation" title="Pause the background animation" hidden>
+            <svg class="i-pause" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4.2 2.6v6.8M7.8 2.6v6.8"/></svg>
+            <svg class="i-play" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M4 2.4v7.2L9.6 6Z"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   </section>

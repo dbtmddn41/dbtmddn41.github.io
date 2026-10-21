@@ -24,7 +24,10 @@
   --figure-bg: #FFFFFF;
   --figure-mask: #DDE2EC;
   --figure-filter: none;
-  --field: rgb(52 78 156 / 0.5);
+  --field-ink: 52 78 156;
+  --field-mask: 118 127 148;
+  --field-flash: 36 67 235;
+  --field-alpha: 0.6;
   --glow: rgba(36, 67, 235, 0.10);
   --backdrop: rgba(17, 20, 24, 0.6);
   --shadow: 0 1px 2px rgba(17, 20, 24, 0.05), 0 10px 28px rgba(17, 20, 24, 0.08);
@@ -66,7 +69,10 @@
     --figure-bg: #EEF0F3;
     --figure-mask: #C4CBD8;
     --figure-filter: brightness(0.93);
-    --field: rgb(147 166 255 / 0.55);
+    --field-ink: 147 166 255;
+    --field-mask: 96 106 130;
+    --field-flash: 200 210 255;
+    --field-alpha: 0.62;
     --glow: rgba(110, 135, 255, 0.13);
     --backdrop: rgba(4, 5, 8, 0.78);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.45);
@@ -90,7 +96,10 @@
   --figure-bg: #EEF0F3;
   --figure-mask: #C4CBD8;
   --figure-filter: brightness(0.93);
-  --field: rgb(147 166 255 / 0.55);
+  --field-ink: 147 166 255;
+  --field-mask: 96 106 130;
+  --field-flash: 200 210 255;
+  --field-alpha: 0.62;
   --glow: rgba(110, 135, 255, 0.13);
   --backdrop: rgba(4, 5, 8, 0.78);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.45);
@@ -328,8 +337,8 @@ kbd {
   background: radial-gradient(closest-side, var(--glow), transparent);
   pointer-events: none;
 }
-/* The field behind the photo: dots on the photo's own tile grid, carrying noise that the
-   cursor denoises. Drawn by main.js; sized and placed there too. */
+/* The field behind the photo: an idle masked diffusion sampler, drawn, sized and placed by
+   main.js. Dot colors come from the --field-* tokens (r g b triplets). */
 .field {
   position: absolute;
   z-index: -1;
@@ -414,6 +423,7 @@ kbd {
   font-size: 0.875rem;
 }
 
+.photo-col { position: relative; }
 .photo {
   position: relative;
   margin: 0;
@@ -470,9 +480,36 @@ kbd {
 }
 .decode-pending .photo-tiles { background: var(--mask); }
 
+/* Pauses the field. Quiet until it is wanted. */
+.field-toggle {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -2px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+.field-toggle:hover,
+.field-toggle:focus-visible { opacity: 1; color: var(--accent); background: var(--accent-soft); }
+.field-toggle svg { width: 12px; height: 12px; }
+.field-toggle .i-play,
+.field-toggle[aria-pressed="true"] .i-pause { display: none; }
+.field-toggle[aria-pressed="true"] .i-play { display: block; }
+
 @media (max-width: 640px) {
   .intro-grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
-  .photo { order: -1; width: 120px; border-radius: 16px; }
+  .photo-col { order: -1; width: 120px; }
+  .photo { border-radius: 16px; }
+  .field-toggle { top: auto; right: auto; bottom: -3px; left: calc(100% + 6px); }
   .photo-fallback { font-size: 1.75rem; }
 }
 
@@ -1063,7 +1100,7 @@ a.pub-thumb:hover { box-shadow: 0 0 0 1px var(--accent-line), var(--shadow); }
 }
 
 @media print {
-  .site-header, .toggle-btn, .bib, .tldr, .toast, .skip-link, .viewer, .palette, .to-top, .photo-tiles, .thumb-tiles, .anchor, .flier, .field { display: none !important; }
+  .site-header, .toggle-btn, .bib, .tldr, .toast, .skip-link, .viewer, .palette, .to-top, .photo-tiles, .thumb-tiles, .anchor, .flier, .field, .field-toggle { display: none !important; }
   body { background: #fff; color: #000; }
   .intro::before { display: none; }
   .tok.is-masked { color: inherit; }

@@ -157,15 +157,19 @@
   };
 
   /* ── The field behind the photo ─────────────────────────
-     Dots sit on the photo's own 8 × 8 tile grid, extended outward, and each carries a fixed
-     Gaussian noise vector ε: a dot is drawn at x₀ + σ(1 − a)·ε for a signal level a. At rest
-     the field is partly noisy (a = 0.7). It denoises in the same steps as the intro, and
-     around the cursor it denoises fully, as if the pointer were the denoiser. It redraws only
-     when something changes, so an idle page costs nothing. */
+     A masked diffusion sampler idles behind the photo. Its "data" are dots on eight lanes
+     that carry slow travelling waves. A masked dot takes the mask color and drifts as noise
+     around its slot: x = x₀ + σ·ε(t), with ε a fixed Gaussian draw plus a slow wander. Each
+     dot flips between masked and unmasked on its own clock while the share of unmasked dots
+     breathes, so the field never stops moving and never moves all at once. On load it
+     decodes with the intro, step for step, with the accent flash the text uses. Under the
+     cursor dots decode on contact and the lanes bend away from the pointer; the decoded
+     trail sinks back into noise a moment later. The button under the photo pauses it. */
   const field = (() => {
     const intro = $('#about');
     const photo = $('#photo');
     const text = $('.intro-text');
+    const toggle = $('#field-toggle');
     const canvas = document.createElement('canvas');
     const g = canvas.getContext && canvas.getContext('2d');
     if (!intro || !photo || !text || !g) return null;
@@ -173,111 +177,211 @@
     canvas.setAttribute('aria-hidden', 'true');
     intro.prepend(canvas);
 
-    const REST = 0.7;
+    // Lengths are in photo widths (W), times in seconds.
+    const LANES = 8;          // at ±0.125, ±0.375, ±0.625 and ±0.875 W from the photo's centre
+    const LANE_GAP = 0.25;
+    const DOT_GAP = 0.075;    // along a lane
+    const REACH = 1.05;       // how far past the photo the field fades out
+    const WAVE = { amp: 0.055, length: 1.8, period: 22 };
+    const SIGMA = 0.2;        // how far noise carries a masked dot
+    const CYCLE = 30;         // mean time for one dot to go unmasked → masked → unmasked
+    const BREATH = { mean: 0.72, depth: 0.12, period: 26 }; // share of unmasked dots
+    const LENS = { decode: 0.5, bend: 0.45, shift: 0.05 };
+    const TAU = Math.PI * 2;
+
     const smoothstep = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-    // One seeded generator per grid point, so a resize keeps every dot's noise.
+    // One seeded generator per slot, so a resize keeps every dot's noise and rhythm.
     const seeded = (seed) => () => {
       seed = (seed + 0x6D2B79F5) | 0;
       let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
-    const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
+    const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(TAU * r());
+    const dwell = (mean) => -Math.log(1 - Math.random()) * mean; // exponential waiting time
 
-    const masked = root.getAttribute('data-intro-masked') === 'true' && !reducedMotion && !document.hidden;
-    let level = masked ? 0 : REST; // drawn signal level, eased toward target
-    let target = level;
-    let decoding = false;
-    let stepTimer = 0;
+    let paused = false;
+    try { paused = localStorage.getItem('field') === 'paused'; } catch (_) { /* storage unavailable */ }
+    const still = reducedMotion;
+    let W = 200;
     let dots = [];
-    let cell = 25;
-    let area = { x: 0, y: 0, w: 0, h: 0 };
-    let color = '';
-    const lens = { x: 0, y: 0, tx: 0, ty: 0, k: 0, kt: 0 };
+    let area = { x: 0, y: 0, w: 1, h: 1 };
+    let colors = null;
+    let clock = 0;           // advances only while the field runs, so a pause never bunches flips
     let raf = 0;
     let last = 0;
+    let visible = true;
+    let sampling = root.getAttribute('data-intro-masked') === 'true' && !still && !paused && !document.hidden;
+    let decodeShare = 0;     // while sampling: the share of dots the decode has reached
+    let stepTimer = 0;
+    const lens = { x: 0, y: 0, tx: 0, ty: 0, k: 0, kt: 0 };
+    const share = () => BREATH.mean + BREATH.depth * Math.sin((TAU * clock) / BREATH.period);
+    const laneY = (d) => d.y + WAVE.amp * W * Math.sin((TAU * d.x) / (WAVE.length * W) - (TAU * clock) / WAVE.period + d.lane * 0.9);
+
+    function readColors() {
+      const cs = getComputedStyle(root);
+      const rgb = (name, fallback) => (cs.getPropertyValue(name).trim() || fallback).split(/[\s,]+/).map(Number);
+      colors = {
+        ink: rgb('--field-ink', '52 78 156'),
+        mask: rgb('--field-mask', '132 141 161'),
+        flash: rgb('--field-flash', '36 67 235'),
+        alpha: parseFloat(cs.getPropertyValue('--field-alpha')) || 0.6,
+      };
+    }
 
     function layout() {
       const ir = intro.getBoundingClientRect();
       const pr = photo.getBoundingClientRect();
       const tr = text.getBoundingClientRect();
-      if (!pr.width) return;
-      cell = pr.width / 8;
+      if (!pr.width || !ir.width) return;
+      W = pr.width;
       const P = { l: pr.left - ir.left, t: pr.top - ir.top, r: pr.right - ir.left, b: pr.bottom - ir.top };
       const stacked = tr.top >= pr.bottom - 1; // phones: the photo sits above the text
       // Keep clear of the text: right of it on wide screens, above the name on phones.
-      const x0 = stacked ? 0 : tr.right - ir.left + cell * 0.5;
-      area = { x: x0, y: 0, w: ir.width - x0, h: stacked ? Math.min(ir.height, P.b + cell * 0.8) : ir.height };
+      const x0 = stacked ? 0 : Math.max(0, tr.right - ir.left + 10);
+      const h = stacked ? Math.min(ir.height, P.b + 0.22 * W) : ir.height;
+      area = { x: x0, y: 0, w: Math.max(1, ir.width - x0), h: Math.max(1, h) };
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       Object.assign(canvas.style, { left: `${area.x}px`, top: `${area.y}px`, width: `${area.w}px`, height: `${area.h}px` });
-      canvas.width = Math.max(1, Math.round(area.w * dpr));
-      canvas.height = Math.max(1, Math.round(area.h * dpr));
+      canvas.width = Math.round(area.w * dpr);
+      canvas.height = Math.round(area.h * dpr);
       g.setTransform(dpr, 0, 0, dpr, -area.x * dpr, -area.y * dpr); // draw in intro coordinates
 
-      const reach = (stacked ? 3.5 : 5.5) * cell;
-      const K = Math.ceil(reach / cell);
+      const old = new Map(dots.map((d) => [d.key, d]));
+      const gap = Math.max(10, DOT_GAP * W);
+      const reach = REACH * W;
+      const cy = (P.t + P.b) / 2;
+      const from = Math.ceil((Math.max(area.x, P.l - reach) - P.l) / gap);
+      const to = Math.floor((Math.min(area.x + area.w, P.r + reach) - P.l) / gap);
+      const p = share();
       dots = [];
-      for (let j = -K; j <= 8 + K; j++) {
-        for (let i = -K; i <= 8 + K; i++) {
-          const x = P.l + i * cell;
-          const y = P.t + j * cell;
+      for (let l = 0; l < LANES; l++) {
+        const y = cy + (l - (LANES - 1) / 2) * LANE_GAP * W;
+        if (y < area.y - 0.1 * W || y > area.y + area.h + 0.1 * W) continue;
+        for (let c = from; c <= to; c++) {
+          const x = P.l + c * gap;
           const d = Math.hypot(Math.max(P.l - x, 0, x - P.r), Math.max(P.t - y, 0, y - P.b));
-          if (d === 0) continue; // under the photo
-          let w = 1 - smoothstep(d / reach);
-          // fade out toward the side that faces the text
-          w *= stacked
-            ? 1 - smoothstep((y - (area.y + area.h - cell * 1.5)) / (cell * 1.5))
-            : smoothstep((x - area.x) / (cell * 1.5));
+          const w = 1 - smoothstep((d - 0.1 * W) / (reach - 0.1 * W));
           if (w < 0.02) continue;
-          const r = seeded((i + 97) * 7919 + (j + 97) * 104729);
-          dots.push({ x, y, ex: gauss(r), ey: gauss(r), w });
+          const key = `${l}:${c}`;
+          let dot = old.get(key);
+          if (!dot) {
+            const r = seeded((l + 31) * 7919 + (c + 211) * 104729);
+            const masked = sampling || Math.random() > p;
+            dot = {
+              key,
+              lane: l,
+              gx: gauss(r),
+              gy: gauss(r),
+              f: [r(), r(), r(), r()].map((v) => TAU / (6 + 8 * v)),
+              ph: [r(), r(), r(), r()].map((v) => TAU * v),
+              rank: r(),
+              masked,
+              m: masked ? 1 : 0,
+              next: clock + dwell(CYCLE * (masked ? 1 - p : p)),
+              hold: -1,
+              flash: 0,
+            };
+          }
+          dot.x = x;
+          dot.y = y;
+          dot.w = w;
+          dots.push(dot);
         }
       }
-      color = getComputedStyle(root).getPropertyValue('--field').trim() || color;
       draw();
+    }
+
+    function step(dt) {
+      const p = share();
+      const touch = LENS.decode * W;
+      for (const d of dots) {
+        if (sampling) {
+          const want = d.rank >= decodeShare;
+          if (d.masked && !want) d.flash = 1; // the decode reached it
+          d.masked = want;
+        } else if (clock >= d.next) {
+          d.masked = !d.masked;
+          d.next = clock + dwell(CYCLE * (d.masked ? 1 - p : p));
+        }
+        // The cursor decodes what it touches and holds it there for a moment.
+        if (lens.k > 0.3 && Math.hypot(d.x - lens.x, laneY(d) - lens.y) < touch) {
+          if (d.m > 0.5 && d.hold < clock) d.flash = 1;
+          d.hold = clock + 0.7 + 0.6 * d.rank;
+        }
+        const target = d.masked && d.hold < clock ? 1 : 0;
+        d.m += (target - d.m) * (1 - Math.exp(-dt / (target ? 0.9 : 0.35))); // decode fast, sink back slowly
+        d.flash *= Math.exp(-dt / 0.45);
+      }
     }
 
     function draw() {
+      if (!colors) readColors();
       g.clearRect(area.x, area.y, area.w, area.h);
-      g.fillStyle = color;
-      const sigma = 0.85 * cell;
-      const R = 4.5 * cell;
-      const size = Math.max(1, cell / 18);
+      const { ink, mask, flash, alpha } = colors;
+      const sigma = SIGMA * W;
+      const bend = LENS.bend * W;
+      const shift = LENS.shift * W;
+      const r0 = Math.max(0.8, 0.006 * W);  // masked
+      const r1 = Math.max(1, 0.0082 * W);   // unmasked
+      const edge = 0.14 * W;
+      const t = clock;
       for (const d of dots) {
+        const mm = smoothstep(d.m);
+        const clean = 1 - mm;
+        const ex = d.gx + 0.45 * Math.sin(d.f[0] * t + d.ph[0]) + 0.3 * Math.sin(d.f[1] * t + d.ph[1]);
+        const ey = d.gy + 0.45 * Math.sin(d.f[2] * t + d.ph[2]) + 0.3 * Math.sin(d.f[3] * t + d.ph[3]);
+        let x = d.x + sigma * ex * mm;
+        let y = laneY(d) + sigma * ey * mm;
         let near = 0;
         if (lens.k > 0.002) {
-          const t = 1 - Math.hypot(d.x - lens.x, d.y - lens.y) / R;
-          if (t > 0) near = t * t * (3 - 2 * t) * lens.k;
+          const dx = x - lens.x;
+          const dy = y - lens.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          if (dist < bend) {
+            near = (1 - dist / bend) ** 2 * lens.k;
+            x += (dx / dist) * shift * near;
+            y += (dy / dist) * shift * near;
+          }
         }
-        const off = sigma * (1 - (level + (1 - level) * near));
-        g.globalAlpha = d.w * (0.7 + 0.3 * near);
+        // Fade at the edges of the area, wherever the dot has drifted to.
+        const fade = d.w
+          * smoothstep((x - area.x) / edge) * smoothstep((area.x + area.w - x) / edge)
+          * smoothstep((y - area.y) / edge) * smoothstep((area.y + area.h - y) / edge);
+        if (fade < 0.01) continue;
+        const f = d.flash;
+        const br = mask[0] + (ink[0] - mask[0]) * clean;
+        const bg = mask[1] + (ink[1] - mask[1]) * clean;
+        const bb = mask[2] + (ink[2] - mask[2]) * clean;
+        const a = Math.min(1, alpha * fade * (0.68 + 0.32 * clean) * (1 + 0.35 * near + 0.6 * f));
+        g.fillStyle = `rgba(${Math.round(br + (flash[0] - br) * f)},${Math.round(bg + (flash[1] - bg) * f)},${Math.round(bb + (flash[2] - bb) * f)},${a.toFixed(3)})`;
         g.beginPath();
-        g.arc(d.x + d.ex * off, d.y + d.ey * off, size * (1 + 0.25 * near), 0, Math.PI * 2);
+        g.arc(x, y, (r0 + (r1 - r0) * clean) * (1 + 0.3 * near) + 0.004 * W * f, 0, TAU);
         g.fill();
       }
-      g.globalAlpha = 1;
     }
 
+    // The idle motion is slow enough for 30 fps; the cursor and the decode get 60 (phones stay at 30).
+    const minFrame = () => (finePointer && (lens.kt || lens.k > 0.01 || sampling) ? 1000 / 62 : 1000 / 31);
+    const running = () => !still && !paused && visible && !document.hidden;
     function frame(now) {
-      const dt = last ? Math.min(now - last, 64) : 16;
-      last = now;
-      const follow = (tau) => 1 - Math.exp(-dt / tau);
-      lens.x += (lens.tx - lens.x) * follow(80);
-      lens.y += (lens.ty - lens.y) * follow(80);
-      lens.k += (lens.kt - lens.k) * follow(lens.kt ? 160 : 320);
-      level += (target - level) * follow(45);
-      draw();
-      const settled = !decoding
-        && Math.abs(target - level) < 0.001
-        && Math.abs(lens.kt - lens.k) < 0.002
-        && (lens.k < 0.002 || Math.hypot(lens.tx - lens.x, lens.ty - lens.y) < 0.25);
-      if (!settled) { raf = requestAnimationFrame(frame); return; }
       raf = 0;
-      last = 0;
+      if (!running()) { last = 0; return; }
+      raf = requestAnimationFrame(frame);
+      if (last && now - last < minFrame()) return;
+      const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
+      last = now;
+      clock += dt;
+      const follow = (tau) => 1 - Math.exp(-dt / tau);
+      lens.x += (lens.tx - lens.x) * follow(0.08);
+      lens.y += (lens.ty - lens.y) * follow(0.08);
+      lens.k += (lens.kt - lens.k) * follow(lens.kt ? 0.15 : 0.4);
+      step(dt);
+      draw();
     }
-    const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
+    const start = () => { if (!raf && running()) raf = requestAnimationFrame(frame); };
 
-    if (finePointer && !reducedMotion) {
+    if (finePointer && !still) {
       intro.addEventListener('pointermove', (e) => {
         if (e.pointerType === 'touch') return;
         const ir = intro.getBoundingClientRect();
@@ -285,42 +389,74 @@
         lens.ty = e.clientY - ir.top;
         if (lens.k < 0.02) { lens.x = lens.tx; lens.y = lens.ty; } // appear where the pointer is
         lens.kt = 1;
-        wake();
       }, { passive: true });
-      intro.addEventListener('pointerleave', () => { lens.kt = 0; wake(); });
+      intro.addEventListener('pointerleave', () => { lens.kt = 0; });
     }
-    document.addEventListener('themechange', () => {
-      color = getComputedStyle(root).getPropertyValue('--field').trim() || color;
-      draw();
-    });
+
+    function syncToggle() {
+      if (!toggle) return;
+      toggle.setAttribute('aria-pressed', String(paused));
+      toggle.title = paused ? 'Play the background animation' : 'Pause the background animation';
+    }
+    function setPaused(next) {
+      paused = next;
+      try { localStorage.setItem('field', paused ? 'paused' : 'playing'); } catch (_) { /* storage unavailable */ }
+      syncToggle();
+      start();
+    }
+    if (toggle && !still) {
+      toggle.hidden = false;
+      syncToggle();
+      toggle.addEventListener('click', () => setPaused(!paused));
+    }
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((entries) => {
+        visible = entries[entries.length - 1].isIntersecting;
+        start();
+      }).observe(intro);
+    }
+    document.addEventListener('visibilitychange', start);
+    document.addEventListener('themechange', () => { readColors(); draw(); });
     if ('ResizeObserver' in window) new ResizeObserver(layout).observe(intro);
     else window.addEventListener('resize', layout, { passive: true });
+    readColors();
     layout();
+    start();
 
     return {
-      // Back to pure noise, as when the intro is masked again.
+      get paused() { return paused; },
+      toggle: () => setPaused(!paused),
+      // Everything back to noise, as when the intro is masked again.
       mask() {
+        if (still || paused) return;
         clearTimeout(stepTimer);
-        decoding = false;
-        level = target = 0;
-        draw();
+        sampling = true;
+        decodeShare = 0;
       },
-      // Denoise to rest in the intro's steps, on the same cosine schedule as its tokens.
+      // Unmask in random order on the cosine schedule, step for step with the intro's tokens,
+      // up to the share the idle sampler is breathing at, then hand the dots back to it.
       decode({ steps, stepMs, delay = 0 }) {
+        if (still || paused) return;
         clearTimeout(stepTimer);
-        level = target = 0;
-        decoding = true;
-        let step = 0;
+        sampling = true;
+        decodeShare = 0;
+        const goal = share();
+        dots.forEach((d) => { d.rank = Math.random(); d.masked = true; d.m = 1; d.hold = -1; });
+        let n = 0;
         const tick = () => {
-          step += 1;
-          target = REST * (1 - Math.cos((Math.PI / 2) * (step / steps)));
-          if (step < steps) stepTimer = setTimeout(tick, stepMs);
-          else decoding = false;
-          wake();
+          n += 1;
+          decodeShare = goal * (1 - Math.cos((Math.PI / 2) * (n / steps)));
+          if (n < steps) { stepTimer = setTimeout(tick, stepMs); return; }
+          const p = share();
+          dots.forEach((d) => {
+            if (d.masked && d.rank < goal) { d.masked = false; d.flash = 1; }
+            d.next = clock + 1.5 + dwell(CYCLE * (d.masked ? 1 - p : p));
+          });
+          sampling = false;
         };
         stepTimer = setTimeout(tick, delay);
-        draw();
-        wake();
+        start();
       },
     };
   })();
@@ -966,6 +1102,13 @@
       items.push({ type: 'Link', label: a.textContent.trim(), run: () => window.open(a.href, '_blank', 'noopener') });
     });
     items.push({ type: 'Action', label: 'Switch between light and dark theme', run: toggleTheme });
+    if (field && !reducedMotion) {
+      items.push({
+        type: 'Action',
+        get label() { return field.paused ? 'Play the background animation' : 'Pause the background animation'; },
+        run: () => field.toggle(),
+      });
+    }
 
     let results = items;
     let active = 0;
