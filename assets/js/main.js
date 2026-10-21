@@ -756,7 +756,7 @@
   $('.wordmark')?.addEventListener('click', (e) => {
     if (!plainClick(e)) return;
     e.preventDefault();
-    jumpTo($('#about'), rectOf($('.wordmark .mk-a'))); // the mark's accent bar flies to the name
+    jumpTo($('#about'), null); // back to the top, where the intro decodes again
   });
   if (toTop) {
     toTop.hidden = false;

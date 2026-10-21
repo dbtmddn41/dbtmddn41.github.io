@@ -208,9 +208,6 @@ kbd {
 }
 
 .wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
   margin-right: auto;
   font-weight: 600;
   font-size: 1rem;
@@ -218,12 +215,6 @@ kbd {
   text-decoration: none;
   white-space: nowrap;
 }
-.mark { flex: none; width: 18px; height: 18px; }
-.mark rect { transition: fill 0.35s ease; }
-.mark .mk-a { fill: var(--accent); }
-.mark .mk-m { fill: var(--mask); }
-.mark .mk-i { fill: var(--ink); }
-.wordmark:hover .mk-m { fill: var(--ink); }
 
 .nav ul {
   display: flex;
