@@ -166,7 +166,7 @@
   const TITLE = { steps: 7, stepMs: 60, delay: 40 };
   const decodeIntro = (delay = INTRO.delay) => {
     decode([introTokens, tiles], { ...INTRO, delay });
-    field?.decode({ ...INTRO, delay });
+    field?.reveal(delay + INTRO.steps * INTRO.stepMs); // the field arrives quietly once the photo is done
   };
 
   /* ── The field behind the photo ─────────────────────────
@@ -177,9 +177,10 @@
      the outer end fades out. A masked dot takes the mask color and drifts as noise around its
      sample: x = x₀ + σ·ε(t), with ε a fixed Gaussian draw plus a slow wander. Every dot flips
      between masked and unmasked on its own clock while the share of unmasked dots breathes,
-     so the field never stops and never moves all at once. On load it decodes with the intro,
-     step for step, with the accent flash the text uses. Under the cursor dots decode on
-     contact and the roll bends away from the pointer. The button under the photo pauses it. */
+     so the field never stops and never moves all at once. It fades in once the photo has
+     decoded, so the first seconds stay on the name and the photo. Under the cursor dots decode
+     on contact, with the accent flash the text uses, and the roll bends away from the pointer.
+     The button under the photo pauses it. */
   const field = (() => {
     const intro = $('#about');
     const photo = $('#photo');
@@ -240,9 +241,6 @@
     let raf = 0;
     let last = 0;
     let visible = true;
-    let sampling = root.getAttribute('data-intro-masked') === 'true' && !still && !paused && !document.hidden;
-    let decodeShare = 0;     // while sampling: the share of dots the decode has reached
-    let stepTimer = 0;
     const lens = { x: 0, y: 0, tx: 0, ty: 0, k: 0, kt: 0 };
     const share = () => BREATH.mean + BREATH.depth * Math.sin((TAU * clock) / BREATH.period);
 
@@ -304,7 +302,7 @@
         dots = Array.from({ length: n }, (_, i) => {
           if (old[i]) return old[i];
           const r = seeded(i * 7919 + 104729);
-          const masked = sampling || Math.random() > p;
+          const masked = Math.random() > p;
           return {
             offset: 0.15 + 0.7 * r(),
             j: gauss(r),
@@ -331,11 +329,7 @@
       const touch = LENS.decode * W;
       place();
       for (const d of dots) {
-        if (sampling) {
-          const want = d.rank >= decodeShare;
-          if (d.masked && !want) d.flash = 1; // the decode reached it
-          d.masked = want;
-        } else if (clock >= d.next) {
+        if (clock >= d.next) {
           d.masked = !d.masked;
           d.next = clock + dwell(CYCLE * (d.masked ? 1 - p : p));
         }
@@ -396,8 +390,8 @@
       }
     }
 
-    // The idle motion is slow enough for 30 fps; the cursor and the decode get 60 (phones stay at 30).
-    const minFrame = () => (finePointer && (lens.kt || lens.k > 0.01 || sampling) ? 1000 / 62 : 1000 / 31);
+    // The idle motion is slow enough for 30 fps; the cursor gets 60 (phones stay at 30).
+    const minFrame = () => (finePointer && (lens.kt || lens.k > 0.01) ? 1000 / 62 : 1000 / 31);
     const running = () => !still && !paused && visible && !document.hidden;
     function frame(now) {
       raf = 0;
@@ -459,40 +453,14 @@
     layout();
     start();
 
+    // Shown at once when the intro does not decode (a deep link, reduced motion, a hidden tab).
+    const introDecodes = root.getAttribute('data-intro-masked') === 'true' && !still && !document.hidden;
+    if (!introDecodes) canvas.classList.add('is-in');
+
     return {
       get paused() { return paused; },
       toggle: () => setPaused(!paused),
-      // Everything back to noise, as when the intro is masked again.
-      mask() {
-        if (still || paused) return;
-        clearTimeout(stepTimer);
-        sampling = true;
-        decodeShare = 0;
-      },
-      // Unmask in random order on the cosine schedule, step for step with the intro's tokens,
-      // up to the share the idle sampler is breathing at, then hand the dots back to it.
-      decode({ steps, stepMs, delay = 0 }) {
-        if (still || paused) return;
-        clearTimeout(stepTimer);
-        sampling = true;
-        decodeShare = 0;
-        const goal = share();
-        dots.forEach((d) => { d.rank = Math.random(); d.masked = true; d.m = 1; d.hold = -1; });
-        let n = 0;
-        const tick = () => {
-          n += 1;
-          decodeShare = goal * (1 - Math.cos((Math.PI / 2) * (n / steps)));
-          if (n < steps) { stepTimer = setTimeout(tick, stepMs); return; }
-          const p = share();
-          dots.forEach((d) => {
-            if (d.masked && d.rank < goal) { d.masked = false; d.flash = 1; }
-            d.next = clock + 1.5 + dwell(CYCLE * (d.masked ? 1 - p : p));
-          });
-          sampling = false;
-        };
-        stepTimer = setTimeout(tick, delay);
-        start();
-      },
+      reveal(after = 0) { setTimeout(() => canvas.classList.add('is-in'), after); },
     };
   })();
 
@@ -661,8 +629,8 @@
 
   // The current section is the last one whose top has passed a reading line at 40% of the
   // viewport height; once the page is scrolled to the bottom, it is the last section.
-  const sections = $$('main > section[id]');
   const navIds = new Set(navLinks.map((a) => a.hash.slice(1)));
+  const sections = $$('main > section[id]').filter((s) => navIds.has(s.id));
   function spyNow() {
     if (!sections.length || performance.now() < spyPausedUntil) return;
     const line = window.innerHeight * 0.4;
@@ -797,6 +765,7 @@
   let activeJump = null;
   function jumpTo(section, from) {
     if (!section) return;
+    unfold(section);
     const id = section.id;
     const destY = scrollTargetY(section);
     const duration = scrollDuration(destY);
@@ -815,7 +784,6 @@
     const groups = isIntro ? [introTokens, tiles] : title ? [titleTokens(title)] : [];
     mask(groups.flat());
     groups.flat().forEach((u) => { u.__jump = jump; });
-    if (isIntro) field?.mask();
 
     const boxes = from && title ? landingBoxes(title, destY) : [];
     const flight = boxes.length ? launch(from, boxes, duration) : [];
@@ -830,7 +798,6 @@
       // Decode whatever a newer jump has not claimed in the meantime.
       const mine = groups.map((g) => g.filter((u) => u.__jump === jump));
       decode(mine, isIntro ? { ...INTRO, delay: 60 } : TITLE);
-      if (isIntro && mine.some((g) => g.length)) field?.decode({ ...INTRO, delay: 60 });
     });
   }
 
@@ -851,6 +818,24 @@
     toTop.hidden = false;
     toTop.addEventListener('click', () => animateScroll(0, scrollDuration(0)));
   }
+
+  /* ── Folded sections (Activities): a link to one opens it, and print shows them all ── */
+  function unfold(section) {
+    const fold = section && $('details.fold', section);
+    if (fold && !fold.open) fold.open = true;
+  }
+  const unfoldHash = () => unfold(location.hash.length > 1 ? document.getElementById(location.hash.slice(1)) : null);
+  unfoldHash();
+  window.addEventListener('hashchange', unfoldHash);
+  let closedForPrint = [];
+  window.addEventListener('beforeprint', () => {
+    closedForPrint = $$('details.fold:not([open])');
+    closedForPrint.forEach((d) => { d.open = true; });
+  });
+  window.addEventListener('afterprint', () => {
+    closedForPrint.forEach((d) => { d.open = false; });
+    closedForPrint = [];
+  });
 
   /* ── Section anchors: a quiet "#" that copies a link to the section ── */
   $$('main > section[id] h2.section-title').forEach((h2) => {
@@ -1133,7 +1118,7 @@
     if (emailAddress) {
       items.push({ type: 'Contact', label: `Copy email address (${emailAddress})`, run: () => copy(emailAddress, emailText, () => showToast('Email address copied')) });
     }
-    $$('.links a[href^="http"]').forEach((a) => {
+    $$('.links a[href]:not([href^="mailto"])').forEach((a) => {
       items.push({ type: 'Link', label: a.textContent.trim(), run: () => window.open(a.href, '_blank', 'noopener') });
     });
     items.push({ type: 'Action', label: 'Switch between light and dark theme', run: toggleTheme });

@@ -171,6 +171,8 @@ p { text-wrap: pretty; }
 }
 .skip-link:focus { top: 12px; }
 
+.muted { color: var(--muted); }
+
 
 kbd {
   padding: 1px 5px;
@@ -342,7 +344,10 @@ kbd {
   position: absolute;
   z-index: -1;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s ease; /* arrives after the photo has decoded */
 }
+.field.is-in { opacity: 1; }
 .intro .wrap {
   padding-block: clamp(40px, 7vw, 84px) clamp(40px, 6vw, 64px);
 }
@@ -838,6 +843,58 @@ a.pub-thumb:hover { box-shadow: 0 0 0 1px var(--accent-line), var(--shadow); }
   color: var(--ink);
 }
 
+/* Activities: folded at the end of the page. The summary is a quiet label with a count and
+   a hairline, in the voice of the group labels, so it reads as an appendix, not a section. */
+.section.more .wrap { padding-top: 0; }
+.fold-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  list-style: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.fold-summary::-webkit-details-marker { display: none; }
+.fold-summary::after {
+  content: "";
+  order: 2;
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.fold-summary:hover,
+.fold[open] > .fold-summary { color: var(--ink); }
+.fold-title {
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.fold-count {
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+.fold-chevron {
+  order: 3;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s ease;
+}
+.fold[open] > .fold-summary .fold-chevron { transform: rotate(180deg); }
+.fold > .lines { margin-top: 14px; }
+@media (prefers-reduced-motion: no-preference) {
+  .fold[open] > .lines { animation: panel-in 0.25s ease-out; }
+}
+
 
 /* ── Decoding text: subword tokens with their own masks ── */
 .word { white-space: nowrap; }
@@ -856,7 +913,6 @@ a.pub-thumb:hover { box-shadow: 0 0 0 1px var(--accent-line), var(--shadow); }
   transition: opacity 0.25s ease;
 }
 .position .tok::after { inset: 0.36em 0.02em 0.3em; }
-.bio .tok::after { inset: 0.42em 0.02em 0.36em; border-radius: 0.2em; }
 .tok.is-masked { color: transparent; }
 .tok.is-masked::after {
   opacity: 1;
