@@ -170,17 +170,14 @@
   };
 
   /* ── The field behind the photo ─────────────────────────
-     A masked diffusion sampler idles behind the photo, and its data is the Swiss roll: the
-     spiral that diffusion models have been shown turning into noise and back since the first
-     diffusion paper (Sohl-Dickstein et al., 2015). Dots are samples along a three-turn roll
-     centred on the photo, streaming slowly outward; the inner end hides behind the photo and
-     the outer end fades out. A masked dot takes the mask color and drifts as noise around its
-     sample: x = x₀ + σ·ε(t), with ε a fixed Gaussian draw plus a slow wander. Every dot flips
-     between masked and unmasked on its own clock while the share of unmasked dots breathes,
-     so the field never stops and never moves all at once. It fades in once the photo has
-     decoded, so the first seconds stay on the name and the photo. Under the cursor dots decode
-     on contact, with the accent flash the text uses, and the roll bends away from the pointer.
-     The button under the photo pauses it. */
+     Seven rows of dots carrying slow travelling waves, drawn as one sample x_t of a diffusion
+     process: every dot sits at x₀ + σ·ε(t), where x₀ is its place on a wave, ε a fixed
+     Gaussian draw plus a slow wander, and σ is shared by the whole field. σ breathes, so the
+     waves keep scattering into noise and gathering back, the forward and reverse processes
+     on a loop. Over the field the cursor takes the noise level in hand: towards the text it
+     is noisy, past the photo it is clean, and the dots right under it swell and step aside.
+     The field fades in once the photo has decoded, never works while the intro is off
+     screen or the tab is hidden, and the button under the photo pauses it. */
   const field = (() => {
     const intro = $('#about');
     const photo = $('#photo');
@@ -194,18 +191,18 @@
     intro.prepend(canvas);
 
     // Lengths are in photo widths (W), times in seconds.
+    const ROWS = 7;
+    const ROW_GAP = 0.28;
+    const GAP = 0.07;          // between dots along a row
+    const REACH = 1.05;        // how far past the photo the rows fade out
+    const SIGMA = 0.34;        // noise at signal level 0
+    const WAVE = { amp: 0.05, length: 1.6, period: 20 };
+    const BREATH = { mean: 0.72, depth: 0.16, period: 18 }; // the signal level over time
+    const LENS = { reach: 0.45, shift: 0.04 };
     const TAU = Math.PI * 2;
-    const ROLL = { from: TAU, to: 4 * TAU, outer: 1.4, end: Math.PI / 4 }; // three turns, outer end down-right
-    const GAP = 0.06;         // between samples along the roll
-    const THICK = 0.022;      // the samples' own noise across the roll, as in the dataset
-    const FLOW = 0.03;        // outward drift along the roll
-    const SIGMA = 0.2;        // how far noise carries a masked dot
-    const CYCLE = 30;         // mean time for one dot to go unmasked → masked → unmasked
-    const BREATH = { mean: 0.72, depth: 0.12, period: 26 }; // share of unmasked dots
-    const LENS = { decode: 0.5, bend: 0.45, shift: 0.05 };
 
     const smoothstep = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-    // One seeded generator per sample, so a resize keeps every dot's noise and rhythm.
+    // One seeded generator per dot, so a resize keeps every dot's noise and rhythm.
     const seeded = (seed) => () => {
       seed = (seed + 0x6D2B79F5) | 0;
       let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -213,67 +210,27 @@
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
     const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(TAU * r());
-    const dwell = (mean) => -Math.log(1 - Math.random()) * mean; // exponential waiting time
-
-    // Arc length of r = b·t is b·F(t), F(t) = (t·√(t²+1) + asinh t) / 2. Tabulate t against
-    // the share of length so samples can sit evenly along the roll.
-    const F = (t) => (t * Math.sqrt(t * t + 1) + Math.asinh(t)) / 2;
-    const TABLE = Array.from({ length: 513 }, (_, k) => ROLL.from + ((ROLL.to - ROLL.from) * k) / 512);
-    const SHARE = TABLE.map((t) => (F(t) - F(ROLL.from)) / (F(ROLL.to) - F(ROLL.from)));
-    const tAt = (q) => {
-      let lo = 0;
-      let hi = 512;
-      while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (SHARE[mid] <= q) lo = mid; else hi = mid; }
-      const f = (q - SHARE[lo]) / (SHARE[hi] - SHARE[lo] || 1);
-      return TABLE[lo] + (TABLE[hi] - TABLE[lo]) * f;
-    };
-    const LENGTH = (ROLL.outer / ROLL.to) * (F(ROLL.to) - F(ROLL.from)); // in W
 
     let paused = false;
     try { paused = localStorage.getItem('field') === 'paused'; } catch (_) { /* storage unavailable */ }
     const still = reducedMotion;
     let W = 200;
-    let centre = { x: 0, y: 0 };
-    let dots = [];
+    let P = { l: 0, t: 0, r: 0, b: 0 };
     let area = { x: 0, y: 0, w: 1, h: 1 };
+    let dots = [];
     let colors = null;
-    let clock = 0;           // advances only while the field runs, so a pause never bunches flips
-    let raf = 0;
-    let last = 0;
-    let visible = true;
+    let clock = 0;             // advances only while the field runs
+    let level = BREATH.mean;   // shared signal level: 1 is the clean waves, 0 pure noise
     const lens = { x: 0, y: 0, tx: 0, ty: 0, k: 0, kt: 0 };
-    const share = () => BREATH.mean + BREATH.depth * Math.sin((TAU * clock) / BREATH.period);
 
     function readColors() {
       const cs = getComputedStyle(root);
-      const rgb = (name, fallback) => (cs.getPropertyValue(name).trim() || fallback).split(/[\s,]+/).map(Number);
+      const rgb = (prop, fallback) => (cs.getPropertyValue(prop).trim() || fallback).split(/[\s,]+/).map(Number);
       colors = {
         ink: rgb('--field-ink', '52 78 156'),
         mask: rgb('--field-mask', '118 127 148'),
-        flash: rgb('--field-flash', '36 67 235'),
         alpha: parseFloat(cs.getPropertyValue('--field-alpha')) || 0.6,
       };
-    }
-
-    // Where each sample sits on the roll now: its clean position and how far along it is.
-    function place() {
-      const b = (ROLL.outer * W) / ROLL.to;
-      const turn = ROLL.end - ROLL.to;
-      const flow = FLOW / LENGTH;
-      for (const d of dots) {
-        const q = (d.q + flow * clock) % 1;
-        const t = tAt(q);
-        const r = b * t;
-        const c = Math.cos(t + turn);
-        const s = Math.sin(t + turn);
-        const tx = b * c - r * s; // tangent of r(t)·(cos, sin)
-        const ty = b * s + r * c;
-        const tl = Math.hypot(tx, ty) || 1;
-        const across = d.j * THICK * W;
-        d.cx = centre.x + r * c - (ty / tl) * across;
-        d.cy = centre.y + r * s + (tx / tl) * across;
-        d.along = smoothstep(q / 0.04) * (1 - smoothstep((q - 0.84) / 0.16)); // fade in and out at the ends
-      }
     }
 
     function layout() {
@@ -282,117 +239,102 @@
       const tr = text.getBoundingClientRect();
       if (!pr.width || !ir.width) return;
       W = pr.width;
-      const P = { l: pr.left - ir.left, t: pr.top - ir.top, r: pr.right - ir.left, b: pr.bottom - ir.top };
-      centre = { x: (P.l + P.r) / 2, y: (P.t + P.b) / 2 };
+      P = { l: pr.left - ir.left, t: pr.top - ir.top, r: pr.right - ir.left, b: pr.bottom - ir.top };
       const stacked = tr.top >= pr.bottom - 1; // phones: the photo sits above the text
       // Keep clear of the text: right of it on wide screens, above the name on phones.
       const x0 = stacked ? 0 : Math.max(0, tr.right - ir.left + 10);
       const h = stacked ? Math.min(ir.height, P.b + 0.22 * W) : ir.height;
       area = { x: x0, y: 0, w: Math.max(1, ir.width - x0), h: Math.max(1, h) };
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      Object.assign(canvas.style, { left: `${area.x}px`, top: `${area.y}px`, width: `${area.w}px`, height: `${area.h}px` });
+      Object.assign(canvas.style, { left: `${area.x}px`, top: '0px', width: `${area.w}px`, height: `${area.h}px` });
       canvas.width = Math.round(area.w * dpr);
       canvas.height = Math.round(area.h * dpr);
-      g.setTransform(dpr, 0, 0, dpr, -area.x * dpr, -area.y * dpr); // draw in intro coordinates
+      g.setTransform(dpr, 0, 0, dpr, -area.x * dpr, 0); // draw in intro coordinates
 
-      const n = Math.floor(LENGTH / Math.max(GAP, 10 / W));
-      if (dots.length !== n) {
-        const old = dots;
-        const p = share();
-        dots = Array.from({ length: n }, (_, i) => {
-          if (old[i]) return old[i];
-          const r = seeded(i * 7919 + 104729);
-          const masked = Math.random() > p;
-          return {
-            offset: 0.15 + 0.7 * r(),
-            j: gauss(r),
+      const gap = Math.max(10, GAP * W);
+      const cy = (P.t + P.b) / 2;
+      const mid = (ROWS - 1) / 2;
+      dots = [];
+      for (let row = 0; row < ROWS; row++) {
+        const y = cy + (row - mid) * ROW_GAP * W;
+        if (y < area.y - 0.2 * W || y > area.y + area.h + 0.2 * W) continue;
+        const depth = 1 - 0.25 * (Math.abs(row - mid) / mid); // outer rows a little smaller and fainter
+        for (let c = Math.ceil((area.x - P.l) / gap); P.l + c * gap <= area.x + area.w; c++) {
+          const x = P.l + c * gap;
+          const d = Math.hypot(Math.max(P.l - x, 0, x - P.r), Math.max(P.t - y, 0, y - P.b));
+          const w = (1 - smoothstep((d - 0.1 * W) / (REACH * W))) * depth;
+          if (w < 0.02) continue;
+          const r = seeded((row + 17) * 7919 + (c + 211) * 104729);
+          dots.push({
+            x,
+            y,
+            row,
+            w,
+            depth,
             gx: gauss(r),
             gy: gauss(r),
-            f: [r(), r(), r(), r()].map((v) => TAU / (6 + 8 * v)),
+            f: [r(), r(), r(), r()].map((v) => TAU / (5 + 8 * v)),
             ph: [r(), r(), r(), r()].map((v) => TAU * v),
-            rank: r(),
-            masked,
-            m: masked ? 1 : 0,
-            next: clock + dwell(CYCLE * (masked ? 1 - p : p)),
-            hold: -1,
-            flash: 0,
-          };
-        });
-        dots.forEach((d, i) => { d.q = (i + d.offset) / n; }); // even along the roll, not on a ruler
+          });
+        }
       }
-      place();
       draw();
-    }
-
-    function step(dt) {
-      const p = share();
-      const touch = LENS.decode * W;
-      place();
-      for (const d of dots) {
-        if (clock >= d.next) {
-          d.masked = !d.masked;
-          d.next = clock + dwell(CYCLE * (d.masked ? 1 - p : p));
-        }
-        // The cursor decodes what it touches and holds it there for a moment.
-        if (lens.k > 0.3 && Math.hypot(d.cx - lens.x, d.cy - lens.y) < touch) {
-          if (d.m > 0.5 && d.hold < clock) d.flash = 1;
-          d.hold = clock + 0.7 + 0.6 * d.rank;
-        }
-        const target = d.masked && d.hold < clock ? 1 : 0;
-        d.m += (target - d.m) * (1 - Math.exp(-dt / (target ? 0.9 : 0.35))); // decode fast, sink back slowly
-        d.flash *= Math.exp(-dt / 0.45);
-      }
     }
 
     function draw() {
       if (!colors) readColors();
       g.clearRect(area.x, area.y, area.w, area.h);
-      const { ink, mask, flash, alpha } = colors;
-      const sigma = SIGMA * W;
-      const bend = LENS.bend * W;
-      const shift = LENS.shift * W;
-      const r0 = Math.max(0.8, 0.006 * W);  // masked
-      const r1 = Math.max(1, 0.0082 * W);   // unmasked
+      const { ink, mask, alpha } = colors;
+      const sigma = SIGMA * W * (1 - level);
+      const reach = LENS.reach * W;
       const edge = 0.14 * W;
       const t = clock;
+      // One color for the whole field: mask grey when noisy, ink when clean.
+      const cr = Math.round(mask[0] + (ink[0] - mask[0]) * level);
+      const cg = Math.round(mask[1] + (ink[1] - mask[1]) * level);
+      const cb = Math.round(mask[2] + (ink[2] - mask[2]) * level);
       for (const d of dots) {
-        const mm = smoothstep(d.m);
-        const clean = 1 - mm;
         const ex = d.gx + 0.45 * Math.sin(d.f[0] * t + d.ph[0]) + 0.3 * Math.sin(d.f[1] * t + d.ph[1]);
         const ey = d.gy + 0.45 * Math.sin(d.f[2] * t + d.ph[2]) + 0.3 * Math.sin(d.f[3] * t + d.ph[3]);
-        let x = d.cx + sigma * ex * mm;
-        let y = d.cy + sigma * ey * mm;
+        let x = d.x + sigma * ex;
+        let y = d.y + WAVE.amp * W * Math.sin((TAU * d.x) / (WAVE.length * W) - (TAU * t) / WAVE.period + d.row * 0.8) + sigma * ey;
         let near = 0;
         if (lens.k > 0.002) {
           const dx = x - lens.x;
           const dy = y - lens.y;
           const dist = Math.hypot(dx, dy) || 1;
-          if (dist < bend) {
-            near = (1 - dist / bend) ** 2 * lens.k;
-            x += (dx / dist) * shift * near;
-            y += (dy / dist) * shift * near;
+          if (dist < reach) {
+            near = (1 - dist / reach) ** 2 * lens.k;
+            x += (dx / dist) * LENS.shift * W * near;
+            y += (dy / dist) * LENS.shift * W * near;
           }
         }
-        // Fade at the ends of the roll and at the edges of the area, wherever the dot has drifted.
-        const fade = d.along
+        const fade = d.w
           * smoothstep((x - area.x) / edge) * smoothstep((area.x + area.w - x) / edge)
           * smoothstep((y - area.y) / edge) * smoothstep((area.y + area.h - y) / edge);
         if (fade < 0.01) continue;
-        const f = d.flash;
-        const br = mask[0] + (ink[0] - mask[0]) * clean;
-        const bg = mask[1] + (ink[1] - mask[1]) * clean;
-        const bb = mask[2] + (ink[2] - mask[2]) * clean;
-        const a = Math.min(1, alpha * fade * (0.68 + 0.32 * clean) * (1 + 0.35 * near + 0.6 * f));
-        g.fillStyle = `rgba(${Math.round(br + (flash[0] - br) * f)},${Math.round(bg + (flash[1] - bg) * f)},${Math.round(bb + (flash[2] - bb) * f)},${a.toFixed(3)})`;
+        const a = Math.min(1, alpha * fade * (0.55 + 0.45 * level) * (1 + 0.4 * near));
+        g.fillStyle = `rgba(${cr},${cg},${cb},${a.toFixed(3)})`;
         g.beginPath();
-        g.arc(x, y, (r0 + (r1 - r0) * clean) * (1 + 0.3 * near) + 0.004 * W * f, 0, TAU);
+        g.arc(x, y, Math.max(0.9, (0.0058 + 0.0025 * level) * W * (0.85 + 0.15 * d.depth)) * (1 + 0.35 * near), 0, TAU);
         g.fill();
       }
+    }
+
+    function step(dt) {
+      const ambient = BREATH.mean + BREATH.depth * Math.sin((TAU * clock) / BREATH.period);
+      // Across the field the cursor sets the level: noisy by the text, clean past the photo.
+      const steer = clamp((lens.x - area.x) / (P.r + 0.3 * W - area.x), 0, 1);
+      const want = ambient + (steer - ambient) * lens.k;
+      level += (want - level) * (1 - Math.exp(-dt / 0.35));
     }
 
     // The idle motion is slow enough for 30 fps; the cursor gets 60 (phones stay at 30).
     const minFrame = () => (finePointer && (lens.kt || lens.k > 0.01) ? 1000 / 62 : 1000 / 31);
     const running = () => !still && !paused && visible && !document.hidden;
+    let raf = 0;
+    let last = 0;
+    let visible = true;
     function frame(now) {
       raf = 0;
       if (!running()) { last = 0; return; }
@@ -404,20 +346,22 @@
       const follow = (tau) => 1 - Math.exp(-dt / tau);
       lens.x += (lens.tx - lens.x) * follow(0.08);
       lens.y += (lens.ty - lens.y) * follow(0.08);
-      lens.k += (lens.kt - lens.k) * follow(lens.kt ? 0.15 : 0.4);
+      lens.k += (lens.kt - lens.k) * follow(lens.kt ? 0.2 : 0.5);
       step(dt);
       draw();
     }
     const start = () => { if (!raf && running()) raf = requestAnimationFrame(frame); };
 
     if (finePointer && !still) {
+      // Only the field itself listens: reading the bio with the cursor leaves it alone.
       intro.addEventListener('pointermove', (e) => {
         if (e.pointerType === 'touch') return;
         const ir = intro.getBoundingClientRect();
         lens.tx = e.clientX - ir.left;
         lens.ty = e.clientY - ir.top;
-        if (lens.k < 0.02) { lens.x = lens.tx; lens.y = lens.ty; } // appear where the pointer is
-        lens.kt = 1;
+        const inside = lens.tx >= area.x && lens.ty >= area.y && lens.ty <= area.y + area.h;
+        if (inside && lens.k < 0.02) { lens.x = lens.tx; lens.y = lens.ty; } // appear where the pointer is
+        lens.kt = inside ? 1 : 0;
       }, { passive: true });
       intro.addEventListener('pointerleave', () => { lens.kt = 0; });
     }

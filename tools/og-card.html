@@ -83,49 +83,31 @@
     if (fresh.has(i)) t.className = 'fresh';
     photo.appendChild(t);
   }
-  // The field around it, as on the page: samples on a Swiss roll centred on the photo slot,
-  // a quarter of them masked (grey, displaced by noise).
+  // The field around it, as on the page: seven rows of dots on soft waves, one noisy sample
+  // x_t of them (grey where the noise is larger).
   const c = document.getElementById('field');
   const g = c.getContext('2d');
   g.scale(2, 2);
   const W = 300;
-  const cx = 1200 - 108 - W / 2;
-  const cy = 165 + W / 2;
-  const from = 2 * Math.PI;
-  const to = 8 * Math.PI;
-  const b = W / to;
-  const turn = Math.PI / 4 - to;
-  const F = (t) => (t * Math.sqrt(t * t + 1) + Math.asinh(t)) / 2;
-  const tAt = (share) => {
-    let lo = from;
-    let hi = to;
-    const goal = F(from) + share * (F(to) - F(from));
-    for (let k = 0; k < 40; k++) { const mid = (lo + hi) / 2; if (F(mid) < goal) lo = mid; else hi = mid; }
-    return lo;
-  };
+  const P = { l: 1200 - 108 - W, t: 165, r: 1200 - 108, b: 165 + W };
+  const cy = (P.t + P.b) / 2;
   const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-  const n = Math.floor((b * (F(to) - F(from))) / 16);
-  for (let i = 0; i < n; i++) {
-    const q = (i + 0.15 + 0.7 * rnd()) / n;
-    const t = tAt(q);
-    const r = b * t;
-    const ca = Math.cos(t + turn);
-    const sa = Math.sin(t + turn);
-    const tx = b * ca - r * sa;
-    const ty = b * sa + r * ca;
-    const tl = Math.hypot(tx, ty);
-    const across = gauss() * 0.022 * W;
-    let x = cx + r * ca - (ty / tl) * across;
-    let y = cy + r * sa + (tx / tl) * across;
-    const masked = rnd() < 0.25;
-    if (masked) { x += gauss() * 0.14 * W; y += gauss() * 0.14 * W; }
-    let w = smooth(q / 0.04) * (1 - smooth((q - 0.84) / 0.16));
-    w *= smooth((x - 700) / 60) * smooth(y / 30) * smooth((630 - y) / 30);
-    if (w < 0.02) continue;
-    g.fillStyle = masked ? `rgba(118, 127, 148, ${(0.42 * w).toFixed(3)})` : `rgba(52, 78, 156, ${(0.62 * w).toFixed(3)})`;
-    g.beginPath();
-    g.arc(x, y, masked ? 1.6 : 2.1, 0, Math.PI * 2);
-    g.fill();
+  const level = 0.92;
+  for (let row = 0; row < 7; row++) {
+    const y0 = cy + (row - 3) * 0.28 * W;
+    const depth = 1 - 0.25 * (Math.abs(row - 3) / 3);
+    for (let x0 = 700; x0 <= 1200; x0 += 0.07 * W) {
+      const d = Math.hypot(Math.max(P.l - x0, 0, x0 - P.r), Math.max(P.t - y0, 0, y0 - P.b));
+      let w = (1 - smooth((d - 0.1 * W) / (1.05 * W))) * depth;
+      const x = x0 + gauss() * 0.34 * W * (1 - level);
+      const y = y0 + 0.05 * W * Math.sin((2 * Math.PI * x0) / (1.6 * W) + row * 0.8) + gauss() * 0.34 * W * (1 - level);
+      w *= smooth((x - 700) / 60) * smooth(y / 30) * smooth((630 - y) / 30);
+      if (w < 0.02) continue;
+      g.fillStyle = `rgba(62, 88, 155, ${(0.6 * w * (0.55 + 0.45 * level)).toFixed(3)})`;
+      g.beginPath();
+      g.arc(x, y, 2.1 * (0.85 + 0.15 * depth), 0, Math.PI * 2);
+      g.fill();
+    }
   }
 </script>
 </body>

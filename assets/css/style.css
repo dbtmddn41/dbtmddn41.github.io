@@ -26,7 +26,6 @@
   --figure-filter: none;
   --field-ink: 52 78 156;
   --field-mask: 118 127 148;
-  --field-flash: 36 67 235;
   --field-alpha: 0.6;
   --glow: rgba(36, 67, 235, 0.10);
   --backdrop: rgba(17, 20, 24, 0.6);
@@ -71,7 +70,6 @@
     --figure-filter: brightness(0.93);
     --field-ink: 147 166 255;
     --field-mask: 96 106 130;
-    --field-flash: 200 210 255;
     --field-alpha: 0.62;
     --glow: rgba(110, 135, 255, 0.13);
     --backdrop: rgba(4, 5, 8, 0.78);
@@ -98,7 +96,6 @@
   --figure-filter: brightness(0.93);
   --field-ink: 147 166 255;
   --field-mask: 96 106 130;
-  --field-flash: 200 210 255;
   --field-alpha: 0.62;
   --glow: rgba(110, 135, 255, 0.13);
   --backdrop: rgba(4, 5, 8, 0.78);
