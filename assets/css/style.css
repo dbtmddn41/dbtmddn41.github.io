@@ -24,6 +24,7 @@
   --figure-bg: #FFFFFF;
   --figure-mask: #DDE2EC;
   --figure-filter: none;
+  --field: rgb(52 78 156 / 0.5);
   --glow: rgba(36, 67, 235, 0.10);
   --backdrop: rgba(17, 20, 24, 0.6);
   --shadow: 0 1px 2px rgba(17, 20, 24, 0.05), 0 10px 28px rgba(17, 20, 24, 0.08);
@@ -65,6 +66,7 @@
     --figure-bg: #EEF0F3;
     --figure-mask: #C4CBD8;
     --figure-filter: brightness(0.93);
+    --field: rgb(147 166 255 / 0.55);
     --glow: rgba(110, 135, 255, 0.13);
     --backdrop: rgba(4, 5, 8, 0.78);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.45);
@@ -88,6 +90,7 @@
   --figure-bg: #EEF0F3;
   --figure-mask: #C4CBD8;
   --figure-filter: brightness(0.93);
+  --field: rgb(147 166 255 / 0.55);
   --glow: rgba(110, 135, 255, 0.13);
   --backdrop: rgba(4, 5, 8, 0.78);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.45);
@@ -325,6 +328,13 @@ kbd {
   background: radial-gradient(closest-side, var(--glow), transparent);
   pointer-events: none;
 }
+/* The field behind the photo: dots on the photo's own tile grid, carrying noise that the
+   cursor denoises. Drawn by main.js; sized and placed there too. */
+.field {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
 .intro .wrap {
   padding-block: clamp(40px, 7vw, 84px) clamp(40px, 6vw, 64px);
 }
@@ -403,25 +413,6 @@ kbd {
   font-family: var(--font-mono);
   font-size: 0.875rem;
 }
-.copy-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-.copy-btn svg { width: 14px; height: 14px; }
-.copy-btn .i-check { display: none; }
-.copy-btn.is-done { color: var(--accent); border-color: var(--accent-line); }
-.copy-btn.is-done .i-copy { display: none; }
-.copy-btn.is-done .i-check { display: block; }
-.copy-btn:hover { color: var(--accent); border-color: var(--accent-line); }
 
 .photo {
   position: relative;
@@ -572,7 +563,7 @@ kbd {
   border-radius: 10px;
   background: var(--figure-bg);
   box-shadow: 0 0 0 1px var(--ring);
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  transition: box-shadow 0.25s ease;
 }
 .pub-thumb img {
   position: absolute;
@@ -581,13 +572,13 @@ kbd {
   height: 100%;
   object-fit: cover;
   filter: var(--figure-filter);
-  transition: opacity 0.4s ease, transform 0.5s ease;
+  transition: opacity 0.4s ease;
 }
 .pub-thumb img.is-contain {
   padding: 5% 4%;
   object-fit: contain;
 }
-.pub-thumb .thumb-alt { opacity: 0; }
+.pub-thumb .thumb-alt { opacity: 0; background: var(--figure-bg); }
 /* With JS on a hover device, the second figure is drawn by 8 × 5 square tiles instead
    (each tile shows its own slice of the figure), so it can arrive tile by tile. */
 .thumb-tiles {
@@ -612,16 +603,11 @@ kbd {
   animation: static 0.36s steps(1) var(--d, 0s) infinite;
 }
 .pub-thumb.has-tiles .thumb-alt { visibility: hidden; }
-.pub-thumb.has-tiles img { transform: none !important; }
 .pub-thumb img.is-loading { opacity: 0; }
 a.pub-thumb { cursor: zoom-in; }
-.pub:hover .pub-thumb {
-  box-shadow: 0 0 0 1px var(--accent-line), var(--shadow);
-  transform: translateY(-2px);
-}
+a.pub-thumb:hover { box-shadow: 0 0 0 1px var(--accent-line), var(--shadow); }
 @media (hover: hover) {
-  .pub:hover .pub-thumb .thumb-alt { opacity: 1; }
-  .pub:hover .pub-thumb img { transform: scale(1.03); }
+  .pub-thumb:hover .thumb-alt { opacity: 1; }
 }
 
 .pub-body { min-width: 0; }
@@ -816,22 +802,6 @@ a.pub-thumb { cursor: zoom-in; }
   color: var(--ink);
 }
 
-.skills {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-.skills div {
-  display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  gap: 16px;
-}
-.skills dt { color: var(--muted); }
-.skills dd { margin: 0; color: var(--ink); }
-
-@media (max-width: 480px) {
-  .skills div { grid-template-columns: minmax(0, 1fr); gap: 0; }
-}
 
 /* ── Decoding text: subword tokens with their own masks ── */
 .word { white-space: nowrap; }
@@ -1093,7 +1063,7 @@ a.pub-thumb { cursor: zoom-in; }
 }
 
 @media print {
-  .site-header, .toggle-btn, .bib, .tldr, .copy-btn, .toast, .skip-link, .viewer, .palette, .to-top, .photo-tiles, .thumb-tiles, .anchor, .flier { display: none !important; }
+  .site-header, .toggle-btn, .bib, .tldr, .toast, .skip-link, .viewer, .palette, .to-top, .photo-tiles, .thumb-tiles, .anchor, .flier, .field { display: none !important; }
   body { background: #fff; color: #000; }
   .intro::before { display: none; }
   .tok.is-masked { color: inherit; }

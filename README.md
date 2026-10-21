@@ -21,26 +21,32 @@ python3 -m http.server 4173
 | 논문 그림 | `assets/img/pubs/`에 넣어요. 썸네일 `<a class="pub-thumb">`의 `href`와 첫 번째 `<img>`가 대표 그림이고, `data-alt`와 `class="thumb-alt"` 이미지는 마우스를 올리면 타일 단위로 디코딩되는 두 번째 그림이에요. 썸네일은 16:10으로 잘리니 `style="object-position: …"`로 위치를 고르거나 `class="is-contain"`으로 전체를 보이게 해요. 타일도 이 값을 그대로 따라가요 |
 | TL;DR | 각 논문의 `<p class="tldr">` |
 | 디코딩되는 글자 | `data-decode`가 붙은 요소(이름, 소속 줄)는 단어 조각 단위로, `data-decode="words"`인 소개 문단은 단어 단위로 처음 열 때 디코딩돼요. `data-decode="view"`가 붙은 섹션 제목은 화면에 들어올 때 디코딩돼요. 빼고 싶으면 속성만 지우면 돼요 |
+| 링크 미리보기 이미지 | `assets/img/og.jpg` (1200×630). 카카오톡·슬랙·링크드인에 링크를 붙이면 나오는 카드예요. 사진 자리는 마스크 타일로 가려 두었어요. 고치려면 `tools/og-card.html`을 수정한 뒤 아래 명령으로 다시 렌더링해요 |
 | 색·폰트 | `style.css` 맨 위 `:root` 토큰. 다크 모드 값은 바로 아래 두 블록에 같이 있어요. 마스크 색은 `--mask`(글자·사진)와 `--figure-mask`(논문 그림 타일)예요 |
 
-논문 그림 출처: CRIT은 arXiv Figure 1·2, OpenSafeIntent는 arXiv Figure 1·3, DDSPO는 프로젝트 페이지의 정성 비교 그림, Revisiting Task Vectors와 Elastic-MDM은 각 논문 PDF의 Figure 1이에요.
+논문 그림 출처: CRIT은 arXiv Figure 1·2, OpenSafeIntent는 arXiv Figure 1·3, DDSPO는 프로젝트 페이지의 정성 비교 그림, Revisiting Task Vectors는 논문 PDF의 Figure 1·3, Elastic-MDM은 PDF의 Figure 1·2예요.
+
+링크 미리보기 카드 다시 만들기 (2배로 렌더링한 뒤 1200×630으로 줄여서 `assets/img/og.jpg`로 저장해요):
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1200,630 --force-device-scale-factor=2 --virtual-time-budget=8000 --screenshot=og@2x.png "file://$PWD/tools/og-card.html"
+```
 
 ## 들어 있는 디테일
 
 모든 디테일이 한 가지 규칙을 따라요. masked diffusion 모델이 글을 쓰듯, 단위(단어 조각, 사진 타일, 그림 타일, 메뉴 칸)가 노이즈 마스크로 시작해 무작위 순서로 풀리고, 풀리는 비율은 MaskGIT의 cosine schedule을 따라요.
 
-- **처음 열 때**: 이름·소속·소개·사진이 14단계에 걸쳐 함께 디코딩돼요. 브라우저 탭 제목과 파비콘도 같은 박자로 디코딩돼요. 마스크에는 은은하게 지글거리는 노이즈 결이 있어요.
+- **처음 열 때**: 이름·소속·소개·사진이 14단계에 걸쳐 함께 디코딩돼요. 사진 뒤의 점 필드, 브라우저 탭 제목, 파비콘도 같은 박자로 디코딩돼요. 마스크에는 은은하게 지글거리는 노이즈 결이 있어요.
+- **사진 뒤 필드**: 사진이 디코딩되는 8×8 타일 격자를 바깥으로 늘린 자리에 점이 있어요. 점마다 고정된 가우시안 노이즈를 품고 있어 평소엔 살짝 흐트러져 있다가, 커서가 다가가면 그 주변만 완전히 디노이즈돼 격자로 정렬돼요. 무언가 바뀔 때만 다시 그려서 가만히 있는 페이지에는 비용이 없어요.
 - **섹션 제목**: 화면에 들어올 때 한 번 디코딩돼요.
 - **메뉴**: 항목마다 다섯 칸짜리 토큰이 있어요. 현재 섹션의 칸이 무작위 순서로 켜지고, 마우스를 올리면 회색 마스크 칸이 보여요. 항목을 누르면 토큰이 도착할 제목의 단어 조각 수만큼 쪼개져요. 조각들은 스크롤과 같은 곡선으로 날아가, 스크롤이 끝나는 순간 제목의 마스크 자리에 정확히 내려앉고, 그때 제목이 디코딩돼요. 로고를 누르면 로고의 파란 막대가 이름으로 날아가요. 스크롤이나 키 입력으로 중간에 끊어도 깔끔하게 정리돼요.
-- **논문 썸네일**: 마우스를 올리면 두 번째 그림이 8×5 정사각 타일 단위로 노이즈를 거쳐 디코딩되고, 떼면 거꾸로 돌아가요. 누르면 그림 뷰어가 열리고 ← →로 모든 그림을 넘겨 볼 수 있어요.
+- **논문 썸네일**: 다섯 편 모두 썸네일에 마우스를 올리면 두 번째 그림이 8×5 정사각 타일 단위로 노이즈를 거쳐 디코딩되고, 떼면 조용히 빠르게 돌아가요. 썸네일 자체에 올렸을 때만 반응해요. 타일은 그림을 썸네일 크기로 한 번 그려 둔 것을 잘라 쓰기 때문에 가는 그래프 선도 원본처럼 선명해요. 누르면 그림 뷰어가 열리고 ← →로 모든 그림을 넘겨 볼 수 있어요.
 - **테마 전환**: 새 테마가 화면 셀 단위로 cosine schedule에 맞춰 드러나요. 세로 화면에서는 셀이 정사각에 가깝도록 다른 격자를 써요. View Transitions를 지원하는 브라우저에서 동작해요.
-- **작은 것들**: 섹션 제목에 마우스를 올리면 나오는 `#`을 누르면 그 섹션 링크가 복사돼요. 텍스트를 선택하면 마스크 색으로 칠해지고, 푸터에는 서울 현재 시각이 있어요. TL;DR·BibTeX 펼치기, 복사 확인(체크·"Copied"), ⌘K(또는 Ctrl K, `/`) 검색, 맨 위로 버튼도 있어요.
+- **작은 것들**: 섹션 제목에 마우스를 올리면 나오는 `#`을 누르면 그 섹션 링크가 복사돼요. 텍스트를 선택하면 마스크 색으로 칠해지고, 푸터에는 서울 현재 시각이 있어요. TL;DR·BibTeX 펼치기, BibTeX 복사 확인("Copied"), ⌘K(또는 Ctrl K, `/`) 검색(이메일 복사도 여기서 돼요), 맨 위로 버튼도 있어요.
 - **움직임 줄이기**: OS에서 이 설정을 켜면 마스크와 애니메이션이 모두 꺼지고 바로 이동해요.
 
-`assets/img/noise.png`(마스크 노이즈)와 `assets/img/dissolve*.png`(테마 전환 격자)는 이 효과들에 쓰는 작은 텍스처예요.
+`assets/img/noise.png`(마스크 노이즈)와 `assets/img/dissolve*.png`(테마 전환 격자)는 이 효과들에 쓰는 작은 텍스처예요. `python3 tools/make_textures.py assets/img`로 다시 만들 수 있어요 (Pillow 필요).
 
 ## GitHub Pages 배포
 
-1. GitHub에 `dbtmddn41.github.io` 이름으로 새 저장소를 만들어요.
-2. 이 폴더의 파일을 그대로 push해요 (`.claude/` 폴더는 로컬 미리보기용이라 빼도 돼요).
-3. 저장소 Settings → Pages에서 Branch를 `main` / `(root)`로 지정하면 `https://dbtmddn41.github.io`에서 열려요.
+https://github.com/dbtmddn41/dbtmddn41.github.io 저장소의 `main` 브랜치 루트가 그대로 https://dbtmddn41.github.io 로 배포돼요. 파일을 고쳐 push하면 1~2분 뒤 반영돼요. `.claude/` 폴더는 로컬 미리보기용이라 저장소에는 올리지 않아요.

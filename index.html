@@ -6,18 +6,23 @@
 <title>Seungwoo Lyu</title>
 <meta name="description" content="Seungwoo Lyu is an undergraduate researcher at Korea University working on multimodal learning, diffusion models, and diffusion language models.">
 <meta name="author" content="Seungwoo Lyu">
+<link rel="canonical" href="https://dbtmddn41.github.io/">
 <meta property="og:type" content="profile">
+<meta property="og:url" content="https://dbtmddn41.github.io/">
 <meta property="og:title" content="Seungwoo Lyu">
 <meta property="og:description" content="Undergraduate researcher at Korea University working on multimodal learning, diffusion models, and diffusion language models.">
-<meta property="og:image" content="assets/img/profile.jpg">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://dbtmddn41.github.io/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Seungwoo Lyu, Undergraduate Researcher, Korea University">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" id="theme-color" content="#F8F9FA">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500&text=%EC%9C%A0%EC%8A%B9%EC%9A%B0&display=swap">
-<link rel="stylesheet" href="assets/css/style.css?v=20261022d">
+<link rel="stylesheet" href="assets/css/style.css?v=20261022e">
 <script>
   (function () {
     var root = document.documentElement;
@@ -33,7 +38,7 @@
     }
   })();
 </script>
-<script src="assets/js/main.js?v=20261022d" defer></script>
+<script src="assets/js/main.js?v=20261022e" defer></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -41,7 +46,7 @@
   "name": "Seungwoo Lyu",
   "alternateName": "유승우",
   "jobTitle": "Undergraduate Researcher",
-  "image": "assets/img/profile.jpg",
+  "url": "https://dbtmddn41.github.io/",
   "affiliation": { "@type": "CollegeOrUniversity", "name": "Korea University" },
   "sameAs": [
     "https://github.com/dbtmddn41",
@@ -109,10 +114,6 @@
             <li class="email-item">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg>
               <a class="email" data-u="dbtmddn41" data-d="gmail.com"><span class="email-text">dbtmddn41 [at] gmail.com</span></a>
-              <button class="copy-btn" type="button" data-copy-email aria-label="Copy email address" title="Copy" hidden>
-                <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/></svg>
-                <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
-              </button>
             </li>
             <li>
               <a href="https://github.com/dbtmddn41" target="_blank" rel="noopener">
@@ -210,8 +211,8 @@
 
   <!-- ── Publications ─────────────────────────────────────────
        Newest first. To add a paper, copy one <li class="pub"> block.
-       Thumbnail: the first <img> is shown; an optional second one (class "thumb-alt")
-       appears on hover; a click opens both figures in the viewer. -->
+       Thumbnail: the first <img> is shown; the second one (class "thumb-alt") decodes in on
+       hover; a click opens both figures in the viewer. -->
   <section class="section" id="publications" aria-labelledby="pubs-title">
     <div class="wrap">
       <h2 class="section-title" id="pubs-title"><span data-decode="view">Publications</span></h2>
@@ -222,8 +223,11 @@
         <li class="pub" id="pub-taskvec">
           <a class="pub-thumb" href="assets/img/pubs/taskvec.webp" data-figure
              data-caption="Revisiting Task Vectors, Figure 1: a task vector extracted with a reference request is injected into a zero-shot target request. Incomplete reproduction of the full-context latents leaves a representation gap that drives a behavioral gap."
-             aria-label="View the Revisiting Task Vectors figure">
+             data-alt="assets/img/pubs/taskvec-2.webp"
+             data-alt-caption="Revisiting Task Vectors, Figure 3: one attention head over the context tokens, colored by query language (French red, English blue), next to the pairwise Jensen–Shannon divergence between those attention patterns. Attention splits by query, which a single task vector cannot capture."
+             aria-label="View the Revisiting Task Vectors figures">
             <img src="assets/img/pubs/taskvec.webp" alt="Diagram of task vector extraction from full-context latents and injection into a target request, with representation and behavioral gaps" width="1062" height="1362" loading="lazy" decoding="async" style="object-position: 50% 32%">
+            <img class="thumb-alt is-contain" src="assets/img/pubs/taskvec-2.webp" alt="" width="1240" height="952" loading="lazy" decoding="async">
           </a>
           <div class="pub-body">
             <h4 class="pub-title">Revisiting Task Vectors: A Structural Analysis of Their Limits</h4>
@@ -318,8 +322,11 @@
         <li class="pub" id="pub-elastic">
           <a class="pub-thumb" href="assets/img/pubs/elastic-mdm.webp" data-figure
              data-caption="Elastic-MDM, Figure 1: in the forward process tokens are masked and then removed; in reverse, a single pass denoises masks and predicts gap counts, and a scheduler inserts masks, so the output length can vary."
-             aria-label="View the Elastic-MDM figure">
+             data-alt="assets/img/pubs/elastic-mdm-2.webp"
+             data-alt-caption="Elastic-MDM, Figure 2: quality–speed trade-off on LM1B (L = 128). Generative perplexity under GPT-2 and Qwen-3 against wall time per sample as the number of steps varies, for Elastic-MDM (blue) and MDLM (red). Lower is better on both axes."
+             aria-label="View the Elastic-MDM figures">
             <img class="is-contain" src="assets/img/pubs/elastic-mdm.webp" alt="Elastic-MDM overview with forward masking and removal, and one-step backward processing with a denoiser, gap-count predictor, and scheduler" width="1700" height="793" loading="lazy" decoding="async">
+            <img class="thumb-alt is-contain" src="assets/img/pubs/elastic-mdm-2.webp" alt="" width="1600" height="794" loading="lazy" decoding="async">
           </a>
           <div class="pub-body">
             <h4 class="pub-title">Elastic-MDM: Efficient Masked Diffusion Models with Variable Sequence Lengths</h4>
@@ -436,41 +443,6 @@
         <li><span>Kaggle, Home Credit: Credit Risk Model Stability, Silver Medal <span class="muted">(122 / 3,856)</span></span><span class="line-date">2024</span></li>
         <li><span>Kaggle, LLM Prompt Recovery <span class="muted">(260 / 2,175)</span></span><span class="line-date">2024</span></li>
       </ul>
-    </div>
-  </section>
-
-  <!-- ── Activities ───────────────────────────────────────── -->
-  <section class="section" id="activities" aria-labelledby="act-title">
-    <div class="wrap">
-      <h2 class="section-title" id="act-title"><span data-decode="view">Activities</span></h2>
-      <ul class="lines">
-        <li><span>LG Aimers, 5th Cohort <span class="muted">· LG</span></span><span class="line-date">Jul 2024 – Sep 2024</span></li>
-        <li><span>Google Machine Learning Bootcamp <span class="muted">· Google</span></span><span class="line-date">Sep 2023 – Nov 2023</span></li>
-        <li><span>42 Seoul <span class="muted">· Innovation Academy</span></span><span class="line-date">Sep 2021 – Aug 2022</span></li>
-        <li><span>CyKor <span class="muted">· Korea University cybersecurity club</span></span><span class="line-date">Mar 2021 – Sep 2022</span></li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- ── Military service ─────────────────────────────────── -->
-  <section class="section" id="military" aria-labelledby="mil-title">
-    <div class="wrap">
-      <h2 class="section-title" id="mil-title"><span data-decode="view">Military Service</span></h2>
-      <ul class="lines">
-        <li><span>Republic of Korea Air Force, Cyber Operations Center <span class="muted">· Sergeant, honorable discharge</span></span><span class="line-date">Sep 2022 – Jun 2024</span></li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- ── Skills ───────────────────────────────────────────── -->
-  <section class="section" id="skills" aria-labelledby="skills-title">
-    <div class="wrap">
-      <h2 class="section-title" id="skills-title"><span data-decode="view">Skills</span></h2>
-      <dl class="skills">
-        <div><dt>Languages</dt><dd>Python, C, C++, Go, SQL</dd></div>
-        <div><dt>Frameworks</dt><dd>PyTorch, TensorFlow, Hugging Face Transformers, vLLM</dd></div>
-        <div><dt>Tools</dt><dd>Git, Linux, Docker, HTCondor</dd></div>
-      </dl>
     </div>
   </section>
 

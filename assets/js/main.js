@@ -102,6 +102,7 @@
       themeBtn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
     }
     if (themeMeta) themeMeta.setAttribute('content', getComputedStyle(root).getPropertyValue('--bg').trim());
+    document.dispatchEvent(new Event('themechange')); // canvas drawings pick up the new colors
   }
   function toggleTheme() {
     const apply = () => {
@@ -150,7 +151,179 @@
   const tiles = $$('#photo-tiles .ptile');
   const INTRO = { steps: 14, stepMs: 80, delay: 220 };
   const TITLE = { steps: 7, stepMs: 60, delay: 40 };
-  const decodeIntro = (delay = INTRO.delay) => decode([introTokens, tiles], { ...INTRO, delay });
+  const decodeIntro = (delay = INTRO.delay) => {
+    decode([introTokens, tiles], { ...INTRO, delay });
+    field?.decode({ ...INTRO, delay });
+  };
+
+  /* ── The field behind the photo ─────────────────────────
+     Dots sit on the photo's own 8 × 8 tile grid, extended outward, and each carries a fixed
+     Gaussian noise vector ε: a dot is drawn at x₀ + σ(1 − a)·ε for a signal level a. At rest
+     the field is partly noisy (a = 0.7). It denoises in the same steps as the intro, and
+     around the cursor it denoises fully, as if the pointer were the denoiser. It redraws only
+     when something changes, so an idle page costs nothing. */
+  const field = (() => {
+    const intro = $('#about');
+    const photo = $('#photo');
+    const text = $('.intro-text');
+    const canvas = document.createElement('canvas');
+    const g = canvas.getContext && canvas.getContext('2d');
+    if (!intro || !photo || !text || !g) return null;
+    canvas.className = 'field';
+    canvas.setAttribute('aria-hidden', 'true');
+    intro.prepend(canvas);
+
+    const REST = 0.7;
+    const smoothstep = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+    // One seeded generator per grid point, so a resize keeps every dot's noise.
+    const seeded = (seed) => () => {
+      seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
+
+    const masked = root.getAttribute('data-intro-masked') === 'true' && !reducedMotion && !document.hidden;
+    let level = masked ? 0 : REST; // drawn signal level, eased toward target
+    let target = level;
+    let decoding = false;
+    let stepTimer = 0;
+    let dots = [];
+    let cell = 25;
+    let area = { x: 0, y: 0, w: 0, h: 0 };
+    let color = '';
+    const lens = { x: 0, y: 0, tx: 0, ty: 0, k: 0, kt: 0 };
+    let raf = 0;
+    let last = 0;
+
+    function layout() {
+      const ir = intro.getBoundingClientRect();
+      const pr = photo.getBoundingClientRect();
+      const tr = text.getBoundingClientRect();
+      if (!pr.width) return;
+      cell = pr.width / 8;
+      const P = { l: pr.left - ir.left, t: pr.top - ir.top, r: pr.right - ir.left, b: pr.bottom - ir.top };
+      const stacked = tr.top >= pr.bottom - 1; // phones: the photo sits above the text
+      // Keep clear of the text: right of it on wide screens, above the name on phones.
+      const x0 = stacked ? 0 : tr.right - ir.left + cell * 0.5;
+      area = { x: x0, y: 0, w: ir.width - x0, h: stacked ? Math.min(ir.height, P.b + cell * 0.8) : ir.height };
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      Object.assign(canvas.style, { left: `${area.x}px`, top: `${area.y}px`, width: `${area.w}px`, height: `${area.h}px` });
+      canvas.width = Math.max(1, Math.round(area.w * dpr));
+      canvas.height = Math.max(1, Math.round(area.h * dpr));
+      g.setTransform(dpr, 0, 0, dpr, -area.x * dpr, -area.y * dpr); // draw in intro coordinates
+
+      const reach = (stacked ? 3.5 : 5.5) * cell;
+      const K = Math.ceil(reach / cell);
+      dots = [];
+      for (let j = -K; j <= 8 + K; j++) {
+        for (let i = -K; i <= 8 + K; i++) {
+          const x = P.l + i * cell;
+          const y = P.t + j * cell;
+          const d = Math.hypot(Math.max(P.l - x, 0, x - P.r), Math.max(P.t - y, 0, y - P.b));
+          if (d === 0) continue; // under the photo
+          let w = 1 - smoothstep(d / reach);
+          // fade out toward the side that faces the text
+          w *= stacked
+            ? 1 - smoothstep((y - (area.y + area.h - cell * 1.5)) / (cell * 1.5))
+            : smoothstep((x - area.x) / (cell * 1.5));
+          if (w < 0.02) continue;
+          const r = seeded((i + 97) * 7919 + (j + 97) * 104729);
+          dots.push({ x, y, ex: gauss(r), ey: gauss(r), w });
+        }
+      }
+      color = getComputedStyle(root).getPropertyValue('--field').trim() || color;
+      draw();
+    }
+
+    function draw() {
+      g.clearRect(area.x, area.y, area.w, area.h);
+      g.fillStyle = color;
+      const sigma = 0.85 * cell;
+      const R = 4.5 * cell;
+      const size = Math.max(1, cell / 18);
+      for (const d of dots) {
+        let near = 0;
+        if (lens.k > 0.002) {
+          const t = 1 - Math.hypot(d.x - lens.x, d.y - lens.y) / R;
+          if (t > 0) near = t * t * (3 - 2 * t) * lens.k;
+        }
+        const off = sigma * (1 - (level + (1 - level) * near));
+        g.globalAlpha = d.w * (0.7 + 0.3 * near);
+        g.beginPath();
+        g.arc(d.x + d.ex * off, d.y + d.ey * off, size * (1 + 0.25 * near), 0, Math.PI * 2);
+        g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+
+    function frame(now) {
+      const dt = last ? Math.min(now - last, 64) : 16;
+      last = now;
+      const follow = (tau) => 1 - Math.exp(-dt / tau);
+      lens.x += (lens.tx - lens.x) * follow(80);
+      lens.y += (lens.ty - lens.y) * follow(80);
+      lens.k += (lens.kt - lens.k) * follow(lens.kt ? 160 : 320);
+      level += (target - level) * follow(45);
+      draw();
+      const settled = !decoding
+        && Math.abs(target - level) < 0.001
+        && Math.abs(lens.kt - lens.k) < 0.002
+        && (lens.k < 0.002 || Math.hypot(lens.tx - lens.x, lens.ty - lens.y) < 0.25);
+      if (!settled) { raf = requestAnimationFrame(frame); return; }
+      raf = 0;
+      last = 0;
+    }
+    const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
+
+    if (finePointer && !reducedMotion) {
+      intro.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'touch') return;
+        const ir = intro.getBoundingClientRect();
+        lens.tx = e.clientX - ir.left;
+        lens.ty = e.clientY - ir.top;
+        if (lens.k < 0.02) { lens.x = lens.tx; lens.y = lens.ty; } // appear where the pointer is
+        lens.kt = 1;
+        wake();
+      }, { passive: true });
+      intro.addEventListener('pointerleave', () => { lens.kt = 0; wake(); });
+    }
+    document.addEventListener('themechange', () => {
+      color = getComputedStyle(root).getPropertyValue('--field').trim() || color;
+      draw();
+    });
+    if ('ResizeObserver' in window) new ResizeObserver(layout).observe(intro);
+    else window.addEventListener('resize', layout, { passive: true });
+    layout();
+
+    return {
+      // Back to pure noise, as when the intro is masked again.
+      mask() {
+        clearTimeout(stepTimer);
+        decoding = false;
+        level = target = 0;
+        draw();
+      },
+      // Denoise to rest in the intro's steps, on the same cosine schedule as its tokens.
+      decode({ steps, stepMs, delay = 0 }) {
+        clearTimeout(stepTimer);
+        level = target = 0;
+        decoding = true;
+        let step = 0;
+        const tick = () => {
+          step += 1;
+          target = REST * (1 - Math.cos((Math.PI / 2) * (step / steps)));
+          if (step < steps) stepTimer = setTimeout(tick, stepMs);
+          else decoding = false;
+          wake();
+        };
+        stepTimer = setTimeout(tick, delay);
+        draw();
+        wake();
+      },
+    };
+  })();
 
   // The browser tab decodes along with the page: its title and its icon.
   function decodeTabTitle() {
@@ -315,25 +488,26 @@
     setToken(next, true);
   }
 
-  // The current section is the one crossing a band at 40–45% of the viewport height.
+  // The current section is the last one whose top has passed a reading line at 40% of the
+  // viewport height; once the page is scrolled to the bottom, it is the last section.
   const sections = $$('main > section[id]');
   const navIds = new Set(navLinks.map((a) => a.hash.slice(1)));
-  const setCurrentSection = (id) => setCurrent(navIds.has(id) ? id : null);
   function spyNow() {
-    const h = window.innerHeight;
-    const hit = sections.find((s) => {
-      const r = s.getBoundingClientRect();
-      return r.top < h * 0.45 && r.bottom > h * 0.4;
-    });
-    if (hit) setCurrentSection(hit.id);
+    if (!sections.length || performance.now() < spyPausedUntil) return;
+    const line = window.innerHeight * 0.4;
+    let hit = sections[0];
+    if (window.scrollY + window.innerHeight >= root.scrollHeight - 2) hit = sections[sections.length - 1];
+    else sections.forEach((s) => { if (s.getBoundingClientRect().top <= line) hit = s; });
+    setCurrent(navIds.has(hit.id) ? hit.id : null);
   }
-  if ('IntersectionObserver' in window) {
-    const spy = new IntersectionObserver((entries) => {
-      if (performance.now() < spyPausedUntil) return;
-      entries.forEach((entry) => { if (entry.isIntersecting) setCurrentSection(entry.target.id); });
-    }, { rootMargin: '-40% 0px -55% 0px' });
-    sections.forEach((section) => spy.observe(section));
-  }
+  let spyTicking = false;
+  window.addEventListener('scroll', () => {
+    if (spyTicking) return;
+    spyTicking = true;
+    requestAnimationFrame(() => { spyTicking = false; spyNow(); });
+  }, { passive: true });
+  window.addEventListener('resize', spyNow, { passive: true });
+  spyNow();
 
   /* ── Jumping: the menu token flies to the title it opens ──
      The page scrolls on an ease-in-out curve while the token, split into one piece per
@@ -470,6 +644,7 @@
     const groups = isIntro ? [introTokens, tiles] : title ? [titleTokens(title)] : [];
     mask(groups.flat());
     groups.flat().forEach((u) => { u.__jump = jump; });
+    if (isIntro) field?.mask();
 
     const boxes = from && title ? landingBoxes(title, destY) : [];
     const flight = boxes.length ? launch(from, boxes, duration) : [];
@@ -484,6 +659,7 @@
       // Decode whatever a newer jump has not claimed in the meantime.
       const mine = groups.map((g) => g.filter((u) => u.__jump === jump));
       decode(mine, isIntro ? { ...INTRO, delay: 60 } : TITLE);
+      if (isIntro && mine.some((g) => g.length)) field?.decode({ ...INTRO, delay: 60 });
     });
   }
 
@@ -546,13 +722,11 @@
     $$('a.pub-thumb').forEach((thumb) => {
       const alt = $('.thumb-alt', thumb);
       if (!alt) return;
-      const pub = thumb.closest('.pub') || thumb;
       const grid = document.createElement('span');
       grid.className = 'thumb-tiles';
       grid.setAttribute('aria-hidden', 'true');
       grid.style.setProperty('--cols', T_COLS);
       grid.style.setProperty('--rows', T_ROWS);
-      grid.style.setProperty('--img', `url("${alt.src}")`);
       const cells = Array.from({ length: T_COLS * T_ROWS }, () => {
         const c = document.createElement('span');
         c.className = 'tile';
@@ -564,30 +738,66 @@
 
       const ready = () => alt.complete && alt.naturalWidth > 0;
       let laidOut = '';
+      let url = '';
+      // Paint the figure once at the thumbnail's exact pixel size, laid out the way the <img>
+      // would be (object-fit, object-position, padding). Tiles then slice it 1:1, so thin chart
+      // lines stay as crisp as in the image itself instead of being resampled per tile.
       const layout = () => {
         const W = thumb.clientWidth;
         const H = thumb.clientHeight;
-        if (!W || !H || !ready() || laidOut === `${W}x${H}`) return;
-        laidOut = `${W}x${H}`;
+        const dpr = Math.min(window.devicePixelRatio || 1, 3);
+        if (!W || !H || !ready() || laidOut === `${W}x${H}@${dpr}`) return;
+        laidOut = `${W}x${H}@${dpr}`;
         const box = fitBox(alt, W, H);
+        const paper = document.createElement('canvas');
+        paper.width = Math.round(W * dpr);
+        paper.height = Math.round(H * dpr);
+        const pg = paper.getContext('2d');
+        if (!pg) return;
+        // Halve in steps first: one large downscale aliases thin lines even at high quality.
+        let src = alt;
+        let sw = alt.naturalWidth;
+        let sh = alt.naturalHeight;
+        while (sw / 2 > box.rw * dpr) {
+          const step = document.createElement('canvas');
+          step.width = Math.round(sw / 2);
+          step.height = Math.round(sh / 2);
+          const sg = step.getContext('2d');
+          sg.imageSmoothingQuality = 'high';
+          sg.drawImage(src, 0, 0, step.width, step.height);
+          src = step;
+          sw = step.width;
+          sh = step.height;
+        }
+        pg.imageSmoothingQuality = 'high';
+        pg.drawImage(src, box.ox * dpr, box.oy * dpr, box.rw * dpr, box.rh * dpr);
+        paper.toBlob((blob) => {
+          if (!blob) return;
+          if (url) URL.revokeObjectURL(url);
+          url = URL.createObjectURL(blob);
+          grid.style.setProperty('--img', `url("${url}")`);
+        });
         cells.forEach((c, i) => {
-          c.style.setProperty('--bs', `${box.rw}px ${box.rh}px`);
-          c.style.setProperty('--bp', `${box.ox - (i % T_COLS) * (W / T_COLS)}px ${box.oy - Math.floor(i / T_COLS) * (H / T_ROWS)}px`);
+          c.style.setProperty('--bs', `${W}px ${H}px`);
+          c.style.setProperty('--bp', `${-(i % T_COLS) * (W / T_COLS)}px ${-Math.floor(i / T_COLS) * (H / T_ROWS)}px`);
         });
       };
 
+      // Decoding in passes each tile through noise; going back is quicker and quiet, so
+      // leaving one thumbnail for the next never draws the eye back to it.
       let cancel = null;
       const swap = (toB) => {
         if (cancel) cancel();
         const timers = new Set();
-        const stop = schedule(cells.length, { steps: 8, stepMs: 34 }, (i) => {
+        const stop = schedule(cells.length, toB ? { steps: 8, stepMs: 34 } : { steps: 4, stepMs: 28 }, (i) => {
           const c = cells[i];
           if (c.classList.contains('is-b') === toB) return;
+          if (!toB) { c.classList.remove('is-b'); return; }
           c.classList.add('is-noise');
           const t = setTimeout(() => {
             timers.delete(t);
             c.classList.remove('is-noise');
-            c.classList.toggle('is-b', toB);
+            c.classList.add('is-b');
           }, 90);
           timers.add(t);
         });
@@ -598,14 +808,15 @@
         };
       };
 
+      // Only the thumbnail itself listens, so passing over a row's text decodes nothing.
       let hovering = false;
-      pub.addEventListener('pointerenter', () => {
+      thumb.addEventListener('pointerenter', () => {
         hovering = true;
         if (!ready()) return;
         layout();
         swap(true);
       });
-      pub.addEventListener('pointerleave', () => {
+      thumb.addEventListener('pointerleave', () => {
         hovering = false;
         swap(false);
       });
@@ -696,11 +907,6 @@
     link.href = `mailto:${emailAddress}`;
     emailText = $('.email-text', link);
     if (emailText) emailText.textContent = emailAddress;
-    const copyBtn = $('[data-copy-email]', link.parentElement);
-    if (copyBtn) {
-      copyBtn.hidden = false;
-      copyBtn.addEventListener('click', () => copy(emailAddress, emailText, () => flashDone(copyBtn)));
-    }
   });
 
   /* ── Seoul time in the footer ───────────────────────── */
