@@ -50,6 +50,15 @@ python3 -m http.server 4173
 
 `assets/img/noise.png`는 마스크에 쓰는 작은 노이즈 텍스처예요. `python3 tools/make_textures.py assets/img`로 다시 만들 수 있어요 (Pillow 필요).
 
+## 방문 통계
+
+https://dbtmddn41.goatcounter.com 에서 봐요. GoatCounter는 쿠키를 쓰지 않고 IP도 저장하지 않아요.
+
+- 페이지 방문 수, 유입 경로(Referrers), 나라, 기기·브라우저가 쌓여요. 누가 봤는지(개인)는 알 수 없어요.
+- 클릭은 이벤트로 따로 쌓여요. `cv`, `email`, `github`, `linkedin`, 논문별 링크(`ddspo-arxiv`, `crit-project`, `osi-code` 같은 이름), 썸네일 그림 열기(`elastic-figure` 등)예요. 이름은 `assets/js/main.js`의 "Visit counts" 부분에서 정해요.
+- 공유한 곳을 구분하고 싶으면 링크에 `?ref=이름`을 붙여요. 예를 들어 지원서에 `https://dbtmddn41.github.io/?ref=kaist`를 쓰면 그 링크로 들어온 방문이 kaist로 따로 보여요.
+- 내 방문을 빼려면 쓰는 브라우저에서 `https://dbtmddn41.github.io/#toggle-goatcounter`를 한 번 열어요. 로컬 미리보기(localhost)는 원래 세지 않아요.
+
 ## GitHub Pages 배포
 
 https://github.com/dbtmddn41/dbtmddn41.github.io 저장소의 `main` 브랜치 루트가 그대로 https://dbtmddn41.github.io 로 배포돼요. 파일을 고쳐 push하면 1~2분 뒤 반영돼요. `.claude/` 폴더는 로컬 미리보기용이라 저장소에는 올리지 않아요.

@@ -1025,6 +1025,34 @@
     } catch (_) { /* time zone data unavailable */ }
   }
 
+  /* ── Visit counts ───────────────────────────────────────
+     index.html loads GoatCounter, which counts page views without cookies and ignores
+     localhost. Here the clicks worth knowing about are counted as events: the CV, the email,
+     the profile links, and each paper's links and figures, named like "ddspo-code". */
+  const clickName = (a) => {
+    const href = a.getAttribute('href') || '';
+    const label = a.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const pub = a.closest('.pub');
+    if (pub) {
+      const paper = pub.id.replace(/^pub-/, '');
+      if (a.matches('[data-figure]')) return `${paper}-figure`;
+      if (a.closest('.pub-title')) return `${paper}-title`;
+      return `${paper}-${label || 'link'}`;
+    }
+    if (href.startsWith('mailto:')) return 'email';
+    if (href.endsWith('cv.pdf')) return 'cv';
+    if (a.closest('.links')) return label || 'profile';
+    if (/^https?:/.test(href)) return `out-${new URL(href).hostname.replace(/^www\./, '')}`;
+    return null;
+  };
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    const gc = window.goatcounter;
+    if (!a || !gc || typeof gc.count !== 'function') return;
+    const name = clickName(a);
+    if (name) gc.count({ path: name, title: a.textContent.trim() || a.getAttribute('aria-label') || name, event: true });
+  });
+
   /* ── Search (⌘K, Ctrl K or /) ───────────────────────── */
   const palette = $('#palette');
   const paletteInput = $('#palette-input');
